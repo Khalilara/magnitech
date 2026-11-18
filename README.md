@@ -1,81 +1,32 @@
-# Magnitech — marketplace e-commerce à commission
+# MAGNITECH storefront
 
-## Stack
+A responsive, frontend-only technology shop. The current repository already uses Next.js App Router, React and TypeScript, so the storefront implementation keeps that existing framework and workspace structure. No storefront API or database is used by these pages.
 
-| Couche | Choix | Pourquoi |
-|---|---|---|
-| Backend API | **Python 3.12 · FastAPI · SQLAlchemy 2 (async) · Alembic · Pydantic v2** | Async natif, OpenAPI auto → client TS typé pour les frontends |
-| Jobs asynchrones | **Celery + Redis** (worker + beat) | Webhooks, libération des commissions, reversements, polling transporteurs |
-| Storefront | **Next.js 15 (App Router, SSR/ISR)** | SEO (rendu serveur, sitemap, données structurées), pages produit en cache ISR |
-| Dashboard | **Next.js 15**, une app pour `vendeur.` et `admin.` | Code partagé, séparation par domaine + RBAC côté API |
-| Base de données | **PostgreSQL 16** | Transactions ACID pour l'argent, contraintes CHECK, JSONB |
-| Cache / broker | **Redis 7** | Sessions, panier, rate-limit applicatif, broker Celery |
-| Recherche | **Meilisearch** | Recherche instantanée tolérante aux fautes, facettes |
-| Reverse proxy | **Traefik v3** | TLS Let's Encrypt automatique, routage par labels, HTTP/3 |
-| Paiement | **Stripe Connect (Express)** — *separate charges and transfers* | Panier multi-vendeurs, reversement aux vendeurs, KYC géré par Stripe |
-| Médias | S3 externe (Scaleway / OVHcloud, hébergement UE) | Pas de stockage objet à opérer soi-même |
+## Run locally
 
-## Structure du monorepo
-
-```
-maghitech/
-├── apps/
-│   ├── api/                      # FastAPI + Celery (une image → api, worker, beat, migrate)
-│   │   ├── app/
-│   │   │   ├── api/v1/           # routers : auth, catalog, cart, checkout, orders,
-│   │   │   │                     #           vendor/*, admin/*, webhooks
-│   │   │   ├── core/             # config, db, sécurité (JWT, argon2), logging
-│   │   │   ├── models/           # modèles SQLAlchemy
-│   │   │   ├── schemas/          # DTO Pydantic
-│   │   │   ├── services/         # logique métier : commission, checkout, payouts, carriers/
-│   │   │   └── workers/          # celery_app, tasks
-│   │   ├── alembic/              # migrations (0001 = db/schema.sql)
-│   │   ├── db/schema.sql         # schéma de référence
-│   │   ├── tests/
-│   │   ├── pyproject.toml · uv.lock
-│   │   └── Dockerfile
-│   ├── storefront/               # Next.js — site client (SEO, COD, Stripe Elements)
-│   │   ├── src/app/              # (shop)/, produit/[slug]/, panier/, commande/
-│   │   └── Dockerfile
-│   └── dashboard/                # Next.js — /vendor/* et /admin/* (middleware par host)
-│       ├── src/app/
-│       └── Dockerfile
-├── packages/
-│   ├── api-client/               # client TS généré depuis l'OpenAPI FastAPI
-│   ├── ui/                       # composants partagés
-│   └── config/                   # tsconfig / eslint communs
-├── infra/traefik/dynamic.yml     # middlewares (headers, compression, rate-limit)
-├── docker-compose.yml
-├── .env.example
-├── package.json · pnpm-workspace.yaml · turbo.json · pnpm-lock.yaml
-└── .dockerignore
+```sh
+pnpm install
+pnpm --filter @maghitech/storefront dev
 ```
 
-## Domaines
+Open `http://localhost:3000`. Build the app with `pnpm --filter @maghitech/storefront build`.
+The Next.js 15 development server writes to `.next-dev`; production builds use `.next`. Keep this split so a build does not replace CSS assets used by a running dev server.
 
-| Hôte | Service |
-|---|---|
-| `maghitech.fr` (+ redirection `www`) | storefront |
-| `vendeur.maghitech.fr` | dashboard, espace vendeur |
-| `admin.maghitech.fr` | dashboard, back-office (restreint par IP) |
-| `api.maghitech.fr` | API (`/v1/webhooks/*` sans rate-limit) |
+## Storefront features
 
-## Flux argent
+- Home, shop, product details, bag, checkout, order status, contact, legal and supplier proposal pages.
+- The catalog in `apps/storefront/src/lib/products.ts` is the source of the initial products. Only products with `published: true` appear in the public shop.
+- Search, category filtering, sorting and cart state are available in the storefront.
+- `/admin` offers local product editing, publishing, margin calculation and image selection. Changes are stored in that browser's local storage. They are not synced to other browsers, saved to the source catalog, or included in a deployment. To publish catalog changes, update `products.ts` and deploy again.
+- `/supplier` sends a proposal, including product details and image URL links, to a configured browser-safe form endpoint. Submissions are not automatically published.
+- Checkout validates delivery details and emails an unpaid order request to the configured store inbox. The customer is told that the store will confirm availability and arrange payment separately. No payment is taken or reported as paid.
+- For order emails, set `NEXT_PUBLIC_ORDER_FORM_ENDPOINT` to the store's FormSubmit AJAX endpoint. FormSubmit requires the recipient to activate the form before submissions are forwarded. The recipient endpoint is public in browser code; use FormSubmit's random email link to avoid publishing a raw mailbox address. The order email contains customer contact and delivery details, so disclose the email handling in your privacy notice before launch.
+- `apps/storefront/src/lib/payment.ts` remains the hosted-payment integration point for a later phase. Configure a secure hosted provider before accepting online payments; frontend redirects must not be treated as payment verification.
 
-1. **Carte** : Stripe PaymentIntent pour le total du panier sur le compte plateforme, `transfer_group = numéro de commande`.
-2. **COD** : le transporteur encaisse puis reverse à Magnitech → `shipments.cod_remitted_at`.
-3. À la commande, une ligne `commissions` par article (taux figé : contrat vendeur > catégorie > défaut).
-4. Livraison (webhook transporteur) → `payable_at = livraison + 14 jours` (rétractation).
-5. Beat horaire : `pending → payable` (pour le COD, seulement une fois les fonds reversés).
-6. Beat hebdomadaire : un `payout` par vendeur → `stripe.Transfer.create` vers son compte Connect.
-7. Remboursement / retour → commission `reversed`, ajustement négatif sur le prochain payout.
+## Public configuration
 
-## Démarrage
+Copy `apps/storefront/.env.example` to `apps/storefront/.env.local` for local development. For Vercel, add `NEXT_PUBLIC_ORDER_FORM_ENDPOINT` in Project Settings → Environment Variables and redeploy; `.env.local` is ignored by Git. Submit one test request after activating the FormSubmit endpoint and verify it arrives in the recipient inbox. Never place private SMTP credentials or payment API keys in `NEXT_PUBLIC_*` variables.
 
-```bash
-cp .env.example .env        # renseigner les secrets
-docker compose up -d --build
-docker compose logs -f migrate api
-```
+## Deploy
 
-Tests API seuls : `docker build -f apps/api/Dockerfile --target test .`
+Deploy the storefront app on Vercel with the root directory set to `apps/storefront`. The existing monorepo also contains separate legacy dashboard/API packages; the storefront pages documented here do not depend on them.

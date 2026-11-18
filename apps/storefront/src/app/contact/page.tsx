@@ -1,0 +1,2 @@
+import Link from "next/link";
+export const metadata={title:"Contact"};export default function ContactPage(){return <main className="page-wrap simple-page"><p className="overline">WE’RE HERE TO HELP</p><h1>Let’s talk.</h1><p>For order questions, product details or anything else, send us a note and we’ll get back to you soon.</p><a className="button dark-button" href="mailto:hello@magnitech.fr">hello@magnitech.fr ↗</a><p>Supplier proposal? <Link href="/supplier">Introduce your product here.</Link></p></main>}

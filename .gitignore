@@ -21,6 +21,8 @@ venv/
 # Next.js
 .next/
 **/.next/
+.next-dev/
+**/.next-dev/
 
 # Build
 dist/
