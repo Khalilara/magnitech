@@ -1,0 +1,34 @@
+# Développement local : uniquement les services de données.
+# L'API et les frontends tournent sur votre machine (rechargement à chaud).
+#   docker compose -f docker-compose.dev.yml up -d
+name: maghitech-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: maghitech
+      POSTGRES_PASSWORD: maghitech
+      POSTGRES_DB: maghitech
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maghitech"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    ports: ["6379:6379"]
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: dev-master-key-123456
+    ports: ["7700:7700"]
+    volumes: [meilidata:/meili_data]
+
+volumes:
+  pgdata:
+  meilidata:

@@ -1,0 +1,33 @@
+# Middlewares partagés (provider "file") — référencés via <nom>@file
+http:
+  middlewares:
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: strict-origin-when-cross-origin
+        permissionsPolicy: "camera=(), microphone=(), geolocation=()"
+
+    compress:
+      compress: {}
+
+    www-to-apex:
+      redirectRegex:
+        regex: "^https://www\\.(.+)"
+        replacement: "https://${1}"
+        permanent: true
+
+    api-ratelimit:
+      rateLimit:
+        average: 50
+        burst: 100
+        period: 1s
+
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+      sniStrict: true

@@ -1,0 +1,31 @@
+# Node
+node_modules/
+**/node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Turbo
+.turbo/
+**/.turbo/
+
+# Next.js
+.next/
+**/.next/
+
+# Build
+dist/
+build/
+coverage/
+
+# Logs
+*.log
