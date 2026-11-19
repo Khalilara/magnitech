@@ -6,6 +6,13 @@ import { Footer, Header } from "@/components/storefront";
 export const metadata: Metadata = {
   title: { default: "MAGNITECH — Technology, thoughtfully chosen", template: "%s | MAGNITECH" },
   description: "A considered collection of everyday technology, accessories and smart devices.",
+  openGraph: {
+    type: "website",
+    siteName: "MAGNITECH",
+    title: "MAGNITECH — Technology, thoughtfully chosen",
+    description: "A considered collection of everyday technology, accessories and smart devices.",
+    locale: "en_GB",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

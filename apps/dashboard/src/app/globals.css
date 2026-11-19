@@ -1208,3 +1208,4 @@ select {
     transition-duration: 0.01ms !important;
   }
 }
+.sign-out-wrap{position:relative}.sign-out-button{border:1px solid #d7d9d2;background:transparent;border-radius:7px;padding:9px 12px;font:inherit;font-size:12px;color:inherit;cursor:pointer}.sign-out-button:hover{background:#f1f3ed}.sign-out-wrap [role="alert"]{position:absolute;right:0;top:calc(100% + 5px);width:220px;background:#fff4f1;color:#912d1e;padding:8px;border-radius:5px;font-size:11px;z-index:3}

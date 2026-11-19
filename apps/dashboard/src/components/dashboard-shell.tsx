@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SignOutButton } from "./sign-out";
 
 type DashboardRole = "vendor" | "admin";
 
@@ -69,6 +70,7 @@ export function DashboardShell({ role, children }: DashboardShellProps) {
           <div className="topbar-actions">
             {!isAdmin && <a className="view-store-link" href={process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}>Voir ma boutique <span aria-hidden="true">↗</span></a>}
             <span className="topbar-date">Lundi 16 novembre 2026</span>
+            {isAdmin && <SignOutButton />}
             <div className="topbar-avatar" aria-label={isAdmin ? "Alex Martin" : "Camille Moreau"}>{isAdmin ? "AM" : "CM"}</div>
           </div>
         </header>

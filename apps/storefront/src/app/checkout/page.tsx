@@ -36,7 +36,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
-          _subject: `New order request ${reference} — ${details.firstName} ${details.lastName}`,
+          _subject: `MAGNITECH order request ${reference}`,
           _template: "table",
           _replyto: details.email,
           _url: window.location.href,
