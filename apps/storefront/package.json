@@ -7,7 +7,9 @@
     "start": "next start",
     "lint": "next lint",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "db:migrate:local": "wrangler d1 migrations apply maghitech-db --local",
+    "db:migrate": "wrangler d1 migrations apply maghitech-db --remote"
   },
   "dependencies": {
     "@maghitech/api-client": "workspace:*",
