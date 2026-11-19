@@ -18,7 +18,7 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
         const response = await fetch("/api/products", { cache: "no-store" });
         if (!response.ok) throw new Error("Could not load products");
         const remoteProducts = await response.json() as Product[];
-        if (!cancelled && remoteProducts.length > 0) setProducts(remoteProducts);
+        if (!cancelled) setProducts(remoteProducts);
       } catch {
         // Keep the bundled catalog if D1 is unavailable.
       }

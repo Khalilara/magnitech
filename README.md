@@ -1,6 +1,6 @@
 # MAGNITECH storefront
 
-A responsive, frontend-only technology shop. The current repository already uses Next.js App Router, React and TypeScript, so the storefront implementation keeps that existing framework and workspace structure. No storefront API or database is used by these pages.
+A responsive technology shop built with Next.js App Router, React and TypeScript. The product catalog and administrator product management use Cloudflare D1. The cart remains in browser local storage.
 
 ## Run locally
 
@@ -9,24 +9,37 @@ pnpm install
 pnpm --filter @maghitech/storefront dev
 ```
 
-Open `http://localhost:3000`. Build the app with `pnpm --filter @maghitech/storefront build`.
-The Next.js 15 development server writes to `.next-dev`; production builds use `.next`. Keep this split so a build does not replace CSS assets used by a running dev server.
+Open `http://localhost:3000`. Build the app with `pnpm --filter @maghitech/storefront build`. The Next.js development server writes to `.next-dev`; production builds use `.next`.
 
 ## Storefront features
 
 - Home, shop, product details, bag, checkout, order status, contact, legal and supplier proposal pages.
-- The catalog in `apps/storefront/src/lib/products.ts` is the source of the initial products. Only products with `published: true` appear in the public shop.
-- Search, category filtering, sorting and cart state are available in the storefront.
-- `/admin` offers local product editing, publishing, margin calculation and image selection. Changes are stored in that browser's local storage. They are not synced to other browsers, saved to the source catalog, or included in a deployment. To publish catalog changes, update `products.ts` and deploy again.
-- `/supplier` sends a proposal, including product details and image URL links, to a configured browser-safe form endpoint. Submissions are not automatically published.
-- Checkout validates delivery details and emails an unpaid order request to the configured store inbox. The customer is told that the store will confirm availability and arrange payment separately. No payment is taken or reported as paid.
-- For order emails, set `NEXT_PUBLIC_ORDER_FORM_ENDPOINT` to the store's FormSubmit AJAX endpoint. FormSubmit requires the recipient to activate the form before submissions are forwarded. The recipient endpoint is public in browser code; use FormSubmit's random email link to avoid publishing a raw mailbox address. The order email contains customer contact and delivery details, so disclose the email handling in your privacy notice before launch.
-- `apps/storefront/src/lib/payment.ts` remains the hosted-payment integration point for a later phase. Configure a secure hosted provider before accepting online payments; frontend redirects must not be treated as payment verification.
+- The D1 migration in `apps/storefront/migrations/` creates and seeds the product catalog. `apps/storefront/src/lib/products.ts` is a fallback if D1 cannot be reached. Only published products appear in the public shop.
+- `/admin` supports product creation, editing, deletion, publishing and unpublishing in D1. Image URLs are supported; direct R2 uploads are not implemented yet.
+- `/supplier` sends proposals to a configured browser-safe form endpoint. Submissions are not automatically published.
+- Checkout emails an unpaid order request to the configured store inbox. It does not take or report payment.
 
-## Public configuration
+## Configuration
 
-Copy `apps/storefront/.env.example` to `apps/storefront/.env.local` for local development. For Vercel, add `NEXT_PUBLIC_ORDER_FORM_ENDPOINT` in Project Settings → Environment Variables and redeploy; `.env.local` is ignored by Git. Submit one test request after activating the FormSubmit endpoint and verify it arrives in the recipient inbox. Never place private SMTP credentials or payment API keys in `NEXT_PUBLIC_*` variables.
+Copy `apps/storefront/.env.example` to `apps/storefront/.env.local` for local development. Set `NEXT_PUBLIC_ORDER_FORM_ENDPOINT` in the deployment environment to enable order request emails. Its endpoint is public in browser code. Never place private SMTP credentials or payment API keys in `NEXT_PUBLIC_*` variables.
+
+Configure admin access from `apps/storefront` with Worker secrets:
+
+```sh
+pnpm exec wrangler secret put ADMIN_PASSWORD
+pnpm exec wrangler secret put ADMIN_SESSION_SECRET
+```
+
+Use a long, unique password and a separate random session secret of at least 32 random bytes. These secrets are not stored in Git. Admin sessions use an HTTP-only, same-site cookie that expires after 12 hours. Configure secrets for each Worker environment that should allow admin access.
+
+The `previews.d1_databases` binding currently points to the production D1 database. Changes made in a Preview, including admin changes, affect the same catalog.
+
+Apply D1 migrations from the storefront package:
+
+```sh
+pnpm --filter @maghitech/storefront db:migrate
+```
 
 ## Deploy
 
-Deploy the storefront app on Vercel with the root directory set to `apps/storefront`. The existing monorepo also contains separate legacy dashboard/API packages; the storefront pages documented here do not depend on them.
+Deploy to Cloudflare Workers using `pnpm --filter @maghitech/storefront deploy`. Ensure the Worker secrets and D1 binding are configured first.
