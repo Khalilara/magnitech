@@ -1,21 +1,19 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { fetchAdminSession } from "@/lib/admin-auth";
 import AdminProducts from "./admin-products";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const cookieHeader = (await cookies()).toString();
-  let status = 0;
-  try {
-    const response = await fetch(`${process.env.API_URL ?? "http://localhost:8000"}/v1/admin/session`, {
-      headers: { cookie: cookieHeader }, cache: "no-store",
-    });
-    status = response.status;
-  } catch {
-    redirect("/login?redirect=%2Fadmin");
+  const response = await fetchAdminSession(cookieHeader);
+
+  if (response.status === 401) redirect("/login?redirect=%2Fadmin");
+  if (response.status === 403) redirect("/");
+  if (!response.ok) {
+    throw new Error(`Admin session verification failed with status ${response.status}`);
   }
-  if (status === 403) redirect("/");
-  if (status !== 200) redirect("/login?redirect=%2Fadmin");
+
   return <AdminProducts />;
 }

@@ -1,7 +1,16 @@
 {
   "name": "@maghitech/storefront",
   "private": true,
-  "scripts": { "dev": "next dev -p 3000", "build": "next build", "start": "next start", "lint": "next lint" },
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "db:migrate:local": "wrangler d1 migrations apply maghitech-db --local",
+    "db:migrate": "wrangler d1 migrations apply maghitech-db --remote"
+  },
   "dependencies": {
     "@maghitech/api-client": "workspace:*",
     "@maghitech/ui": "workspace:*",
@@ -11,5 +20,12 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
-  "devDependencies": { "@maghitech/config": "workspace:*", "typescript": "^5.6.0", "@types/react": "^19.0.0", "@types/node": "^22.0.0" }
+  "devDependencies": {
+    "@maghitech/config": "workspace:*",
+    "@opennextjs/cloudflare": "^1.20.17",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.165.0"
+  }
 }

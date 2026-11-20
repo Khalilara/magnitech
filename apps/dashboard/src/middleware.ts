@@ -21,7 +21,7 @@ export async function middleware(req: NextRequest) {
     : host === process.env.ADMIN_HOST ? "/admin" : "/vendor";
   const resolvedPath = isLocalHost && hasExplicitSpace ? pathname : `${space}${pathname === "/" ? "" : pathname}`;
   if (resolvedPath === "/admin" || resolvedPath.startsWith("/admin/")) {
-    const apiUrl = process.env.API_URL ?? "http://localhost:8000";
+    const apiUrl = process.env.API_INTERNAL_URL ?? process.env.API_URL ?? "http://localhost:8000";
     let role = "";
     try {
       const session = await fetch(`${apiUrl}/v1/admin/session`, {

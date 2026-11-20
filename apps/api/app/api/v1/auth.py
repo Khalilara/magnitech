@@ -23,6 +23,7 @@ limiter = Redis.from_url(settings.redis_url, decode_responses=True)
 SESSION_COOKIE = "magnitech_session"
 STATE_COOKIE = "magnitech_oauth_state"
 VERIFIER_COOKIE = "magnitech_oauth_verifier"
+REDIRECT_COOKIE = "magnitech_oauth_redirect"
 
 PROVIDERS = {
     "google": {
@@ -98,6 +99,8 @@ async def oauth_start(provider: str, request: Request):
     response = RedirectResponse(f"{config['authorize']}?{urlencode(params)}", status_code=302)
     _set_cookie(response, STATE_COOKIE, state, 600)
     _set_cookie(response, VERIFIER_COOKIE, verifier, 600)
+    redirect_target = "/admin" if request.query_params.get("redirect") == "/admin" else ""
+    _set_cookie(response, REDIRECT_COOKIE, redirect_target, 600)
     return response
 
 
@@ -186,10 +189,13 @@ async def oauth_callback(
     await db.execute(text("INSERT INTO auth_sessions(token_hash,user_id,expires_at) VALUES (:hash,:uid,:exp)"), {"hash": token_hash, "uid": user_id, "exp": expires_at})
     await db.commit()
     target = settings.dashboard_url if role == "admin" else settings.storefront_url
+    if role == "admin" and request.cookies.get(REDIRECT_COOKIE) == "/admin":
+        target = f"{settings.storefront_url.rstrip('/')}/admin"
     response = RedirectResponse(target, status_code=303)
     _set_cookie(response, SESSION_COOKIE, raw_session, settings.session_ttl_days * 86400)
     response.delete_cookie(STATE_COOKIE, path="/", domain=settings.auth_cookie_domain or None)
     response.delete_cookie(VERIFIER_COOKIE, path="/", domain=settings.auth_cookie_domain or None)
+    response.delete_cookie(REDIRECT_COOKIE, path="/", domain=settings.auth_cookie_domain or None)
     return response
 
 

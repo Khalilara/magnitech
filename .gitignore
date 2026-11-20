@@ -23,6 +23,10 @@ venv/
 **/.next/
 .next-dev/
 **/.next-dev/
+.open-next/
+**/.open-next/
+.wrangler/
+**/.wrangler/
 
 # Build
 dist/
