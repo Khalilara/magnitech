@@ -15,6 +15,7 @@ Open `http://localhost:3000`. Build the app with `pnpm --filter @maghitech/store
 
 - Home, shop, product details, bag, checkout, order status, contact, legal and supplier proposal pages.
 - The D1 migration in `apps/storefront/migrations/` creates and seeds the product catalog. `apps/storefront/src/lib/products.ts` is a fallback if D1 cannot be reached. Only published products appear in the public shop.
+- The current D1 schema contract is documented in `apps/api/db/D1_SCHEMA.md`; the PostgreSQL schema is retained only for the separate FastAPI/Alembic backend.
 - `/admin` supports product creation, editing, deletion, publishing and unpublishing in D1. Image URLs are supported; direct R2 uploads are not implemented yet.
 - `/supplier` sends proposals to a configured browser-safe form endpoint. Submissions are not automatically published.
 - Checkout emails an unpaid order request to the configured store inbox. It does not take or report payment.

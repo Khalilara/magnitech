@@ -4,8 +4,8 @@ export type DbProductRow = {
   slug: string;
   description: string;
   category: string;
-  supplier_price: number;
-  price: number;
+  supplier_price_cents: number;
+  price_cents: number;
   in_stock: number;
   featured: number;
   published: number;
@@ -26,7 +26,7 @@ export function normalizeProduct(row: DbProductRow & { image_url?: string | null
   } catch { /* Use an empty specification list for malformed legacy data. */ }
   return {
     id: row.id, name: row.name, slug: row.slug, description: row.description, category: row.category,
-    supplierPrice: Number(row.supplier_price), price: Number(row.price), inStock: Boolean(row.in_stock),
+    supplierPrice: Number(row.supplier_price_cents) / 100, price: Number(row.price_cents) / 100, inStock: Boolean(row.in_stock),
     featured: Boolean(row.featured), published: Boolean(row.published), specs,
     images: row.image_url ? [row.image_url] : [],
   };
