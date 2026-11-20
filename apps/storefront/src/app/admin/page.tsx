@@ -141,7 +141,7 @@ export default function AdminPage() {
 
   return <main className="page-wrap admin-page">
     <div className="shop-top"><div><p className="overline">D1 PRODUCT CATALOG</p><h1>Product<br/><em>management.</em></h1></div>
-      <div className="admin-actions"><button className="button dark-button" onClick={() => openEditor(blankProduct())}>+ Add product</button><button className="text-button" onClick={signOut}>Sign out</button></div>
+      <div className="admin-actions"><a className="text-button" href="/root">D1 schema</a><button className="button dark-button" onClick={() => openEditor(blankProduct())}>+ Add product</button><button className="text-button" onClick={signOut}>Sign out</button></div>
     </div>
     <div className="local-banner">Changes are saved directly to the Cloudflare D1 catalog.</div>
     {notice && <p className="notice" role="status">{notice}</p>}

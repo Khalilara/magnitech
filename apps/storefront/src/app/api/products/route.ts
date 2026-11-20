@@ -20,7 +20,8 @@ export async function GET() {
         grouped.set(row.id, product);
       } else if (row.image_url) product.images.push(row.image_url);
     }
-    return Response.json([...grouped.values()], {
+    const publicProducts = [...grouped.values()].map(({ supplierPrice: _supplierPrice, ...product }) => product);
+    return Response.json(publicProducts, {
       headers: { "Cache-Control": "public, max-age=0, s-maxage=10, stale-while-revalidate=30" },
     });
   } catch (error) {
