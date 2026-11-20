@@ -14,8 +14,8 @@ export async function PUT(request: Request, context: Context) {
     const db = await getDatabase();
     if (!db) return Response.json({ error: "D1 binding MAGHITECH_DB is not configured" }, { status: 503 });
     const product = productFromBody(await request.json());
-    const statements = [db.prepare(`UPDATE products SET name=?,slug=?,description=?,category=?,supplier_price=?,price=?,in_stock=?,featured=?,published=?,specs=? WHERE id=?`)
-      .bind(product.name, product.slug, product.description, product.category, product.supplierPrice, product.price, Number(product.inStock), Number(product.featured), Number(product.published), JSON.stringify(product.specs), id),
+    const statements = [db.prepare(`UPDATE products SET name=?,slug=?,description=?,category=?,supplier_price=?,price=?,in_stock=?,featured=?,published=?,specs=?,status=? WHERE id=?`)
+      .bind(product.name, product.slug, product.description, product.category, product.supplierPrice, product.price, Number(product.inStock), Number(product.featured), Number(product.published), JSON.stringify(product.specs), product.published ? "approved" : "draft", id),
       db.prepare("DELETE FROM product_images WHERE product_id=?").bind(id)];
     product.images.forEach((url, position) => statements.push(db.prepare("INSERT INTO product_images (id,product_id,image_url,position) VALUES (?,?,?,?)").bind(crypto.randomUUID(), id, url, position)));
     await db.batch(statements);
