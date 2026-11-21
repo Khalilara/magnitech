@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { readJsonResponse } from "@/lib/api-response";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export function RegisterForm() {
           acceptedTerms: form.get("acceptedTerms") === "on",
         }),
       });
-      const body = await response.json() as { error?: string };
+      const body = await readJsonResponse<{ error?: string }>(response);
       if (!response.ok) throw new Error(body.error ?? "Could not create your account.");
       router.replace("/shop");
       router.refresh();
