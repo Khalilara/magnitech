@@ -1,0 +1,9 @@
+# D1 schema, binding, and every route that can execute SQL through the D1 binding.
+# Require @Khalilara to approve these files before they are merged into main.
+/.github/CODEOWNERS                         @Khalilara
+/apps/storefront/migrations/                 @Khalilara
+/apps/storefront/wrangler.jsonc              @Khalilara
+/apps/storefront/package.json                @Khalilara
+/apps/storefront/src/lib/d1.ts               @Khalilara
+/apps/storefront/src/app/api/                @Khalilara
+/apps/api/db/D1_SCHEMA.md                    @Khalilara

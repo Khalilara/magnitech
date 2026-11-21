@@ -9,7 +9,8 @@ export async function GET() {
     if (!db) return Response.json({ error: "D1 binding MAGHITECH_DB is not configured" }, { status: 503 });
     const { results = [] } = await db.prepare(`SELECT p.*, i.image_url
       FROM products p LEFT JOIN product_images i ON i.product_id = p.id
-      WHERE p.published = 1 AND p.approval_status = 'approved' ORDER BY p.featured DESC, p.name ASC, i.position ASC`)
+      WHERE p.published = 1 AND p.status = 'approved'
+      ORDER BY p.featured DESC, p.name ASC, i.position ASC`)
       .all<DbProductRow & { image_url: string | null }>();
     const grouped = new Map<string, ReturnType<typeof normalizeProduct>>();
     for (const row of results) {
@@ -19,7 +20,8 @@ export async function GET() {
         grouped.set(row.id, product);
       } else if (row.image_url) product.images.push(row.image_url);
     }
-    return Response.json([...grouped.values()], {
+    const publicProducts = [...grouped.values()].map(({ supplierPrice: _supplierPrice, ...product }) => product);
+    return Response.json(publicProducts, {
       headers: { "Cache-Control": "public, max-age=0, s-maxage=10, stale-while-revalidate=30" },
     });
   } catch (error) {

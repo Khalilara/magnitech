@@ -1,4 +1,4 @@
-"""Schéma initial Maghitech (db/schema.sql)
+"""Schéma initial PostgreSQL Maghitech (db/postgres_schema.legacy.sql)
 
 Revision ID: 0001_initial
 Revises:
@@ -12,7 +12,7 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-SCHEMA = Path(__file__).resolve().parents[2] / "db" / "schema.sql"
+SCHEMA = Path(__file__).resolve().parents[2] / "db" / "postgres_schema.legacy.sql"
 
 
 def upgrade() -> None:

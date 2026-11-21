@@ -37,8 +37,8 @@ export async function POST(request: Request) {
     if (!db) return Response.json({ error: "D1 binding MAGHITECH_DB is not configured" }, { status: 503 });
     const product = productFromBody(await request.json());
     product.id = crypto.randomUUID();
-    const statements = [db.prepare(`INSERT INTO products (id,name,slug,description,category,supplier_price,price,in_stock,featured,published,specs,approval_status,submitted_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,'approved',CURRENT_TIMESTAMP)`).bind(product.id, product.name, product.slug, product.description, product.category, product.supplierPrice, product.price, Number(product.inStock), Number(product.featured), Number(product.published), JSON.stringify(product.specs))];
+    const statements = [db.prepare(`INSERT INTO products (id,name,slug,description,category,supplier_price_cents,price_cents,in_stock,featured,published,specs,status)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(product.id, product.name, product.slug, product.description, product.category, Math.round(product.supplierPrice * 100), Math.round(product.price * 100), Number(product.inStock), Number(product.featured), Number(product.published), JSON.stringify(product.specs), product.published ? "approved" : "draft")];
     product.images.forEach((url, position) => statements.push(db.prepare("INSERT INTO product_images (id,product_id,image_url,position) VALUES (?,?,?,?)").bind(crypto.randomUUID(), product.id, url, position)));
     await db.batch(statements);
     return Response.json(product, { status: 201, headers: { "Cache-Control": "no-store" } });
