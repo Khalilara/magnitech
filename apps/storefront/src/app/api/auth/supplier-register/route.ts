@@ -20,8 +20,8 @@ export async function POST(request: Request) {
   const db = await getDatabase();
   if (!db) return Response.json({ error: "Supplier database is unavailable." }, { status: 503 });
   const id = crypto.randomUUID(), requestId = crypto.randomUUID();
-  const passwordHash = await hashPassword(password);
   try {
+    const passwordHash = await hashPassword(password);
     await db.batch([
       db.prepare("INSERT INTO users (id,email,password_hash,role,status) VALUES (?,?,?,'wholesaler','active')")
         .bind(id,email,passwordHash),
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     return Response.json({ status: "pending", message: "Your supplier application was received. You can sign in after an administrator approves it." }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not submit application.";
+    console.error("Supplier registration failed", error);
     if (/unique|constraint/i.test(message)) return Response.json({ error: "An account or supplier application already exists for this email." }, { status: 409 });
     return Response.json({ error: "Could not submit application. Please try again." }, { status: 500 });
   }

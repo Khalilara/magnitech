@@ -30,9 +30,9 @@ export async function POST(request: Request) {
 
   const db = await getDatabase();
   if (!db) return Response.json({ error: "User database is unavailable." }, { status: 503 });
-  const id = crypto.randomUUID();
-  const passwordHash = await hashPassword(password);
   try {
+    const id = crypto.randomUUID();
+    const passwordHash = await hashPassword(password);
     await db.prepare(`INSERT INTO users (id, email, password_hash, role, status)
       VALUES (?, ?, ?, 'customer', 'active')`).bind(id, email, passwordHash).run();
     const token = await createSession(db, id);
@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create account";
+    console.error("Customer registration failed", error);
     if (/unique|constraint/i.test(message)) {
       return Response.json({ error: "An account with this email already exists." }, { status: 409 });
     }
