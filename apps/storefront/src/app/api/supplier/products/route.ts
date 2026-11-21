@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const db = await getDatabase();
   if (!db) return Response.json({ error: "Supplier database is unavailable." }, { status: 503 });
   const { results = [] } = await db.prepare(`SELECT p.*,i.image_url FROM products p LEFT JOIN product_images i ON i.product_id=p.id
-    WHERE p.supplier_id=? ORDER BY p.submitted_at DESC,i.position ASC`).bind(access.user.id).all<DbProductRow & { image_url: string | null }>();
+    WHERE p.wholesaler_id=? ORDER BY i.position ASC`).bind(access.user.wholesalerId).all<DbProductRow & { image_url: string | null }>();
   const grouped = new Map<string, ReturnType<typeof normalizeProduct>>();
   for (const row of results) {
     let product = grouped.get(row.id);
@@ -29,9 +29,9 @@ export async function POST(request: Request) {
   if (!db) return Response.json({ error: "Supplier database is unavailable." }, { status: 503 });
   try {
     const product = productFromBody(await request.json());
-    product.id = crypto.randomUUID(); product.published = false; product.featured = false; product.approvalStatus = "pending"; product.supplierId = access.user.id;
-    const statements = [db.prepare(`INSERT INTO products (id,name,slug,description,category,supplier_price,price,in_stock,featured,published,specs,supplier_id,approval_status,submitted_at)
-      VALUES (?,?,?,?,?,?,?,?,0,0,?,?, 'pending',CURRENT_TIMESTAMP)`).bind(product.id,product.name,product.slug,product.description,product.category,product.supplierPrice,product.price,Number(product.inStock),JSON.stringify(product.specs),access.user.id)];
+    product.id = crypto.randomUUID(); product.published = false; product.featured = false; product.status = "pending_review"; product.wholesalerId = access.user.wholesalerId ?? null;
+    const statements = [db.prepare(`INSERT INTO products (id,name,slug,description,category,supplier_price_cents,price_cents,in_stock,featured,published,specs,wholesaler_id,status)
+      VALUES (?,?,?,?,?,?,?,?,0,0,?,?,'pending_review')`).bind(product.id,product.name,product.slug,product.description,product.category,Math.round(product.supplierPrice*100),Math.round(product.price*100),Number(product.inStock),JSON.stringify(product.specs),access.user.wholesalerId)];
     product.images.forEach((image,position)=>statements.push(db.prepare("INSERT INTO product_images (id,product_id,image_url,position) VALUES (?,?,?,?)").bind(crypto.randomUUID(),product.id,image,position)));
     await db.batch(statements);
     return Response.json(product,{status:201,headers:{"Cache-Control":"no-store"}});

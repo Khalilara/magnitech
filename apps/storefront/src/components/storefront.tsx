@@ -28,7 +28,7 @@ export function Header(){
         <ThemeToggle/>
         <div className="account-control" ref={accountRef}>
           <button className="account-button" aria-label="Open account options" aria-haspopup="dialog" aria-expanded={accountOpen} onClick={()=>setAccountOpen(value=>!value)}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c.7-4 3.2-6 7.5-6s6.8 2 7.5 6"/></svg></button>
-          {accountOpen&&<section className="account-popover" aria-label="Account options"><b>Welcome back!</b><p>Choose how to sign in</p><div className="account-providers">{[["google","Google"],["github","GitHub"],["microsoft","Microsoft"]].map(([id,name])=><a key={id} href={`/api/auth/oauth/${id}`}><span className={`provider-mark ${id}`} aria-hidden="true">{id==="google"?"G":id==="github"?"●":"▦"}</span>Continue with {name}</a>)}</div><div className="account-divider"><span>or</span></div><Link className="account-email" href="/login">✉&nbsp; Continue with email</Link><p className="account-signup">New here? <Link href="/register">Create an account</Link></p></section>}
+          {accountOpen&&<section className="account-popover" aria-label="Account options"><b>Welcome back!</b><Link className="account-email" href="/login">✉&nbsp; Continue with email</Link><p className="account-signup">New here? <Link href="/register">Create an account</Link></p></section>}
         </div>
         {count>0&&<button className="cart-link" onClick={()=>setCartOpen(true)} aria-label={`Open shopping cart, ${count} items`} aria-haspopup="dialog" aria-expanded={cartOpen}>Shopping Cart <span>{count}</span></button>}
         <button className="mobile-menu" aria-label="Open navigation" onClick={()=>document.body.classList.toggle("menu-open")}>☰</button>

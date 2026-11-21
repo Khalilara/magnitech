@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function LoginOptions({ redirectToAdmin, oauthError, supplierMode = false }: { redirectToAdmin: boolean; oauthError?: string; supplierMode?: boolean }) {
+export function LoginOptions({ redirectToAdmin }: { redirectToAdmin: boolean }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -21,7 +21,7 @@ export function LoginOptions({ redirectToAdmin, oauthError, supplierMode = false
       });
       const body = await response.json() as { error?: string; user?: { role?: string } };
       if (!response.ok) throw new Error(body.error ?? "Could not sign in.");
-      router.replace(redirectToAdmin && body.user?.role === "admin" ? "/admin" : body.user?.role === "supplier" ? "/supplier/dashboard" : "/shop");
+      router.replace(redirectToAdmin && body.user?.role === "admin" ? "/admin" : body.user?.role === "wholesaler" ? "/supplier/dashboard" : "/shop");
       router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not sign in.");
@@ -31,7 +31,6 @@ export function LoginOptions({ redirectToAdmin, oauthError, supplierMode = false
   }
 
   return <>
-  {oauthError && <p className="auth-error" role="alert">Sign in could not be completed. {oauthError}</p>}
   <form className="auth-form" onSubmit={submit}>
     <label>Email<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
     <label>Password<input name="password" type="password" autoComplete="current-password" maxLength={128} required /></label>
@@ -40,6 +39,5 @@ export function LoginOptions({ redirectToAdmin, oauthError, supplierMode = false
     <button className="button dark-button" type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign In"}<span>↗</span></button>
     <p className="login-admin-note">Admin access is granted separately by the store owner.</p>
   </form>
-  {!supplierMode&&<div className="oauth-options"><span>OR CONTINUE WITH</span><div>{["Google","GitHub","Microsoft"].map(provider=><a key={provider} href={`/api/auth/oauth/${provider.toLowerCase()}`}>Continue with {provider}</a>)}</div></div>}
   </>;
 }

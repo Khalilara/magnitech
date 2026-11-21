@@ -13,13 +13,13 @@ export async function PUT(request: Request, context: Context) {
   const { id } = await context.params;
   const db = await getDatabase();
   if (!db) return Response.json({ error: "Supplier database is unavailable." }, { status: 503 });
-  const owned = await db.prepare("SELECT id FROM products WHERE id=? AND supplier_id=? AND approval_status IN ('pending','archived') LIMIT 1").bind(id,access.user.id).all<{id:string}>();
+  const owned = await db.prepare("SELECT id FROM products WHERE id=? AND wholesaler_id=? AND status IN ('pending_review','rejected','archived') LIMIT 1").bind(id,access.user.wholesalerId).all<{id:string}>();
   if (!owned.results?.length) return Response.json({error:"This product cannot be edited."},{status:404});
   try {
     const product=productFromBody(await request.json());
-    const statements=[db.prepare(`UPDATE products SET name=?,slug=?,description=?,category=?,supplier_price=?,price=?,in_stock=?,featured=0,published=0,specs=?,approval_status='pending',rejection_reason=NULL,submitted_at=CURRENT_TIMESTAMP,reviewed_at=NULL WHERE id=? AND supplier_id=?`)
-      .bind(product.name,product.slug,product.description,product.category,product.supplierPrice,product.price,Number(product.inStock),JSON.stringify(product.specs),id,access.user.id),
-      db.prepare("DELETE FROM product_images WHERE product_id=? AND EXISTS (SELECT 1 FROM products WHERE id=? AND supplier_id=?)").bind(id,id,access.user.id)];
+    const statements=[db.prepare(`UPDATE products SET name=?,slug=?,description=?,category=?,supplier_price_cents=?,price_cents=?,in_stock=?,featured=0,published=0,specs=?,status='pending_review',rejection_reason=NULL,reviewed_by=NULL,reviewed_at=NULL WHERE id=? AND wholesaler_id=?`)
+      .bind(product.name,product.slug,product.description,product.category,Math.round(product.supplierPrice*100),Math.round(product.price*100),Number(product.inStock),JSON.stringify(product.specs),id,access.user.wholesalerId),
+      db.prepare("DELETE FROM product_images WHERE product_id=?").bind(id)];
     product.images.forEach((image,position)=>statements.push(db.prepare("INSERT INTO product_images (id,product_id,image_url,position) VALUES (?,?,?,?)").bind(crypto.randomUUID(),id,image,position)));
     await db.batch(statements);
     return Response.json({id,status:"pending"},{headers:{"Cache-Control":"no-store"}});

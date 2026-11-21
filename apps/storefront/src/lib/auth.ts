@@ -7,9 +7,9 @@ const PASSWORD_ITERATIONS = 600_000;
 export type AuthUser = {
   id: string;
   email: string;
-  first_name: string | null;
-  last_name: string | null;
-  role: "customer" | "admin" | "supplier";
+  role: "customer" | "admin" | "wholesaler";
+  status: "active" | "pending" | "suspended" | "disabled";
+  wholesalerId?: string | null;
 };
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -29,19 +29,29 @@ async function sha256(value: string): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export async function hashPassword(password: string, salt: Uint8Array = crypto.getRandomValues(new Uint8Array(16))) {
-  const saltBytes = new Uint8Array(salt);
+export async function hashPassword(password: string): Promise<string> {
+  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations: PASSWORD_ITERATIONS }, key, 256,
+    { name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations: PASSWORD_ITERATIONS },
+    key,
+    256,
   );
-  return { salt: toBase64Url(saltBytes), hash: toBase64Url(new Uint8Array(bits)) };
+  return `${toBase64Url(saltBytes)}.${toBase64Url(new Uint8Array(bits))}`;
 }
 
-export async function passwordMatches(password: string, salt: string, expectedHash: string): Promise<boolean> {
+export async function passwordMatches(password: string, storedHash: string): Promise<boolean> {
+  const [salt, expectedHash, extra] = storedHash.split(".");
+  if (!salt || !expectedHash || extra) return false;
   try {
-    const derived = await hashPassword(password, fromBase64Url(salt));
-    const actual = fromBase64Url(derived.hash);
+    const saltBytes = new Uint8Array(Array.from(fromBase64Url(salt)));
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+    const bits = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations: PASSWORD_ITERATIONS },
+      key,
+      256,
+    );
+    const actual = new Uint8Array(bits);
     const expected = fromBase64Url(expectedHash);
     if (actual.length !== expected.length) return false;
     let difference = 0;
@@ -83,58 +93,36 @@ export async function findCurrentUser(token: string | null, db?: D1Database | nu
   if (!database) return null;
   const tokenHash = await sha256(token);
   const { results = [] } = await database.prepare(`
-    SELECT u.id, u.email, u.first_name, u.last_name, u.role
-    FROM auth_sessions s JOIN users u ON u.id = s.user_id
-    WHERE s.token_hash = ? AND s.expires_at > ? AND u.is_active = 1
+    SELECT u.id, u.email, u.role, u.status, wp.id AS wholesalerId
+    FROM user_sessions s
+    JOIN users u ON u.id = s.user_id
+    LEFT JOIN wholesaler_profiles wp ON wp.user_id = u.id
+    WHERE s.token_hash = ? AND s.expires_at > ? AND s.revoked_at IS NULL AND u.status = 'active'
     LIMIT 1
-  `).bind(tokenHash, Math.floor(Date.now() / 1000)).all<AuthUser>();
+  `).bind(tokenHash, new Date().toISOString()).all<AuthUser>();
   return results[0] ?? null;
 }
 
-export async function createSession(db: D1Database, userId: string) {
+export async function createSession(db: D1Database, userId: string): Promise<string> {
   const token = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
   const tokenHash = await sha256(token);
-  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
-  await db.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)")
-    .bind(tokenHash, userId, expiresAt).run();
+  const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
+  await db.prepare("INSERT INTO user_sessions (id, token_hash, user_id, expires_at) VALUES (?, ?, ?, ?)")
+    .bind(crypto.randomUUID(), tokenHash, userId, expiresAt).run();
   return token;
-}
-
-export async function consumeAuthRateLimit(
-  db: D1Database, request: Request, action: string, identity: string, limit: number, windowSeconds: number,
-): Promise<boolean> {
-  const ip = request.headers.get("cf-connecting-ip") ?? "local";
-  const rateKey = await sha256(`${action}:${ip}:${identity}`);
-  const now = Math.floor(Date.now() / 1000);
-  const windowStart = now - windowSeconds;
-  await db.prepare(`INSERT INTO auth_rate_limits (rate_key, window_started_at, attempts)
-    VALUES (?, ?, 1)
-    ON CONFLICT(rate_key) DO UPDATE SET
-      attempts = CASE WHEN auth_rate_limits.window_started_at <= ? THEN 1 ELSE auth_rate_limits.attempts + 1 END,
-      window_started_at = CASE WHEN auth_rate_limits.window_started_at <= ? THEN excluded.window_started_at ELSE auth_rate_limits.window_started_at END`)
-    .bind(rateKey, now, windowStart, windowStart).run();
-  const { results = [] } = await db.prepare("SELECT attempts FROM auth_rate_limits WHERE rate_key = ?")
-    .bind(rateKey).all<{ attempts: number }>();
-  if (Math.random() < 0.01) {
-    await db.prepare("DELETE FROM auth_rate_limits WHERE window_started_at < ?").bind(now - 86_400).run();
-  }
-  return (results[0]?.attempts ?? limit + 1) <= limit;
 }
 
 export async function requireAdmin(request: Request): Promise<Response | null> {
   const user = await findCurrentUser(readSessionToken(request));
-  if (!user) {
-    return Response.json({ error: "Authentication required" }, { status: 401, headers: { "Cache-Control": "no-store" } });
-  }
-  if (user.role !== "admin") {
-    return Response.json({ error: "Administrator access required" }, { status: 403, headers: { "Cache-Control": "no-store" } });
-  }
+  if (!user) return Response.json({ error: "Authentication required" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  if (user.role !== "admin") return Response.json({ error: "Administrator access required" }, { status: 403, headers: { "Cache-Control": "no-store" } });
   return null;
 }
 
-export async function logoutSession(request: Request) {
+export async function logoutSession(request: Request): Promise<void> {
   const token = readSessionToken(request);
   if (!token) return;
   const db = await getDatabase();
-  if (db) await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await sha256(token)).run();
+  if (db) await db.prepare("UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE token_hash = ?")
+    .bind(await sha256(token)).run();
 }

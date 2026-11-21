@@ -10,8 +10,8 @@ export type DbProductRow = {
   featured: number;
   published: number;
   specs: string;
-  approval_status?: "pending" | "approved" | "archived";
-  supplier_id?: string | null;
+  status?: "draft" | "pending_review" | "approved" | "rejected" | "archived";
+  wholesaler_id?: string | null;
   rejection_reason?: string | null;
 };
 
@@ -21,6 +21,8 @@ export type StoreProduct = {
   published: boolean; specs: Record<string, string>; images: string[];
   approvalStatus?: "pending" | "approved" | "archived";
   supplierId?: string | null;
+  status?: "draft" | "pending_review" | "approved" | "rejected" | "archived";
+  wholesalerId?: string | null;
   rejectionReason?: string | null;
 };
 
@@ -34,7 +36,9 @@ export function normalizeProduct(row: DbProductRow & { image_url?: string | null
     id: row.id, name: row.name, slug: row.slug, description: row.description, category: row.category,
     supplierPrice: Number(row.supplier_price_cents) / 100, price: Number(row.price_cents) / 100, inStock: Boolean(row.in_stock),
     featured: Boolean(row.featured), published: Boolean(row.published), specs,
-    approvalStatus: row.approval_status ?? (row.published ? "approved" : "pending"), supplierId: row.supplier_id ?? null,
+    status: row.status ?? (row.published ? "approved" : "draft"),
+    approvalStatus: row.status === "pending_review" ? "pending" : row.status === "approved" ? "approved" : row.status === "archived" ? "archived" : "pending",
+    wholesalerId: row.wholesaler_id ?? null,
     images: row.image_url ? [row.image_url] : [],
   };
 }
