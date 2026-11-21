@@ -19,6 +19,9 @@ export type StoreProduct = {
   id: string; name: string; slug: string; description: string; category: string;
   supplierPrice: number; price: number; inStock: boolean; featured: boolean;
   published: boolean; specs: Record<string, string>; images: string[];
+  approvalStatus?: "pending" | "approved" | "archived";
+  supplierId?: string | null;
+  rejectionReason?: string | null;
 };
 
 export function normalizeProduct(row: DbProductRow & { image_url?: string | null }): StoreProduct {

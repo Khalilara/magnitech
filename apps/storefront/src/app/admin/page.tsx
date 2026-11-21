@@ -1,16 +1,13 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { findCurrentUser, SESSION_COOKIE } from "@/lib/auth";
-import AdminProducts from "./admin-products";
-import SupplierRequests from "./supplier-requests";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useCallback, useEffect, useState } from "react";
+import { formatPrice, type Product } from "@/lib/products";
+import { useStore } from "@/components/store-provider";
 
-export default async function AdminPage() {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value ?? null;
-  const user = await findCurrentUser(token);
-  if (!user) redirect("/login?redirect=%2Fadmin");
-  if (user.role !== "admin") redirect("/");
+const blankProduct = (): Product => ({
+  id: "", name: "", slug: "", description: "", category: "Computing", images: [],
+  supplierPrice: 0, price: 0, inStock: true, featured: false, published: false, specs: {},
+});
 
 function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()

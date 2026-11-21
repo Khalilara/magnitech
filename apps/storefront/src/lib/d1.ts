@@ -25,3 +25,11 @@ export async function getRuntimeEnv(): Promise<Record<string, unknown>> {
   const { env } = getCloudflareContext();
   return env as Record<string, unknown>;
 }
+
+export async function getAdminSettings() {
+  const values = await getRuntimeEnv();
+  return {
+    password: typeof values.ADMIN_PASSWORD === "string" ? values.ADMIN_PASSWORD : "",
+    sessionSecret: typeof values.ADMIN_SESSION_SECRET === "string" ? values.ADMIN_SESSION_SECRET : "",
+  };
+}
