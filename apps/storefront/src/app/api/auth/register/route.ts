@@ -1,5 +1,5 @@
 import { getDatabase } from "@/lib/d1";
-import { createSession, hashPassword, sessionCookie } from "@/lib/auth";
+import { createSession, hashPassword, isCloudflareRateLimited, sessionCookie } from "@/lib/auth";
 import { isSameOrigin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,12 @@ export async function POST(request: Request) {
   }
   if (password.length < 12 || password.length > 128) {
     return Response.json({ error: "Use a password between 12 and 128 characters." }, { status: 400 });
+  }
+  if (await isCloudflareRateLimited(request, "REGISTER_RATE_LIMITER", email)) {
+    return Response.json({ error: "Too many registration attempts. Please wait and try again." }, {
+      status: 429,
+      headers: { "Cache-Control": "no-store", "Retry-After": "60" },
+    });
   }
 
   const db = await getDatabase();

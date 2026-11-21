@@ -1,5 +1,5 @@
 import { getDatabase } from "@/lib/d1";
-import { createSession, passwordMatches, sessionCookie } from "@/lib/auth";
+import { createSession, isCloudflareRateLimited, passwordMatches, sessionCookie } from "@/lib/auth";
 import { isSameOrigin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,12 @@ export async function POST(request: Request) {
   const password = typeof body.password === "string" ? body.password : "";
   if (email.length > 254 || password.length > 128) {
     return Response.json({ error: "Email or password is incorrect." }, { status: 401 });
+  }
+  if (await isCloudflareRateLimited(request, "LOGIN_RATE_LIMITER", email)) {
+    return Response.json({ error: "Too many sign-in attempts. Please wait and try again." }, {
+      status: 429,
+      headers: { "Cache-Control": "no-store", "Retry-After": "60" },
+    });
   }
 
   const db = await getDatabase();

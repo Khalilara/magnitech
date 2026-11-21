@@ -1,4 +1,4 @@
-import { getDatabase, type D1Database } from "@/lib/d1";
+import { getDatabase, getRuntimeEnv, type D1Database } from "@/lib/d1";
 
 export const SESSION_COOKIE = "magnitech_session";
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -125,4 +125,22 @@ export async function logoutSession(request: Request): Promise<void> {
   const db = await getDatabase();
   if (db) await db.prepare("UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE token_hash = ?")
     .bind(await sha256(token)).run();
+}
+
+export async function isCloudflareRateLimited(
+  request: Request,
+  bindingName: "LOGIN_RATE_LIMITER" | "REGISTER_RATE_LIMITER",
+  identifier: string,
+): Promise<boolean> {
+  const env = await getRuntimeEnv();
+  const limiter = env[bindingName] as { limit(input: { key: string }): Promise<{ success: boolean }> } | undefined;
+  if (!limiter) return false;
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const key = await sha256(`${bindingName}:${ip}:${identifier}`);
+  try {
+    const result = await limiter.limit({ key });
+    return result.success === false;
+  } catch {
+    return false;
+  }
 }

@@ -11,8 +11,7 @@ export default function SupplierRegisterForm(){
     <label>Email<input name="email" type="email" autoComplete="email" maxLength={254} required/></label>
     <div className="auth-form-row"><label>Company name<input name="companyName" maxLength={160} required/></label><label>Phone<input name="phone" type="tel" maxLength={40} required/></label></div>
     <label>Business address<textarea name="businessAddress" rows={2} maxLength={500} required/></label>
-    <label>Business description<textarea name="businessDescription" rows={3} maxLength={3000} required/></label>
-    <div className="auth-form-row"><label>Business registration <small>Optional</small><input name="businessRegistration" maxLength={120}/></label><label>Website <small>Optional, https://</small><input name="website" type="url" placeholder="https://" maxLength={300}/></label></div>
+    <div className="auth-form-row"><label>Business registration <small>Optional</small><input name="businessRegistration" maxLength={120}/></label></div>
     <div className="auth-form-row"><label>Password<input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={128} required/><small>At least 12 characters.</small></label><label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" minLength={12} maxLength={128} required/></label></div>
     {error&&<p className="auth-error" role="alert">{error}</p>}<button className="button dark-button" disabled={busy}>{busy?"Submitting application…":"Submit supplier application"}<span>↗</span></button><p className="login-admin-note">Your application stays pending until an administrator reviews it. No supplier access is granted on submission.</p>
   </form>;
