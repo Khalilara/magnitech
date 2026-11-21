@@ -11,20 +11,17 @@ export interface D1Database {
   batch<T = unknown>(statements: D1Statement[]): Promise<T[]>;
 }
 
+export interface R2Bucket {
+  put(key: string, value: ArrayBuffer | Uint8Array, options?: { httpMetadata?: { contentType?: string }; customMetadata?: Record<string, string> }): Promise<unknown>;
+  get(key: string): Promise<{ body: ReadableStream; httpMetadata?: { contentType?: string }; httpEtag?: string } | null>;
+}
+
 export async function getDatabase(): Promise<D1Database | null> {
   const { env } = getCloudflareContext();
   return ((env as Record<string, unknown>).MAGHITECH_DB as D1Database | undefined) ?? null;
 }
 
-export function getApiOrigin(): string {
-  const configured = process.env.API_INTERNAL_URL ?? process.env.API_URL;
-  if (configured) return configured.replace(/\/+$/, "");
-
+export async function getRuntimeEnv(): Promise<Record<string, unknown>> {
   const { env } = getCloudflareContext();
-  const values = env as Record<string, unknown>;
-  const runtimeValue = values.API_INTERNAL_URL ?? values.API_URL;
-  if (typeof runtimeValue !== "string" || !runtimeValue.trim()) {
-    throw new Error("API_INTERNAL_URL or API_URL must be configured for admin session verification");
-  }
-  return runtimeValue.replace(/\/+$/, "");
+  return env as Record<string, unknown>;
 }

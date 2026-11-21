@@ -10,6 +10,9 @@ export type DbProductRow = {
   featured: number;
   published: number;
   specs: string;
+  approval_status?: "pending" | "approved" | "archived";
+  supplier_id?: string | null;
+  rejection_reason?: string | null;
 };
 
 export type StoreProduct = {
@@ -28,6 +31,7 @@ export function normalizeProduct(row: DbProductRow & { image_url?: string | null
     id: row.id, name: row.name, slug: row.slug, description: row.description, category: row.category,
     supplierPrice: Number(row.supplier_price), price: Number(row.price), inStock: Boolean(row.in_stock),
     featured: Boolean(row.featured), published: Boolean(row.published), specs,
+    approvalStatus: row.approval_status ?? (row.published ? "approved" : "pending"), supplierId: row.supplier_id ?? null,
     images: row.image_url ? [row.image_url] : [],
   };
 }
@@ -47,7 +51,7 @@ export function productFromBody(value: unknown): StoreProduct {
   };
   if (typeof item.inStock !== "boolean" || typeof item.featured !== "boolean" || typeof item.published !== "boolean") throw new Error("Invalid product: stock and publication flags are required");
   const images = item.images;
-  if (!Array.isArray(images) || images.length > 12 || images.some((image) => typeof image !== "string" || image.length > 2048 || !/^https?:\/\//i.test(image))) throw new Error("Invalid product: images must be up to 12 HTTP(S) URLs");
+  if (!Array.isArray(images) || images.length > 12 || images.some((image) => typeof image !== "string" || image.length > 2048 || (!/^https?:\/\//i.test(image) && !/^\/api\/product-images\/[a-z\d-]+\/[a-f\d-]+\.(?:jpg|png|webp)$/i.test(image)))) throw new Error("Invalid product: images must be up to 12 HTTP(S) URLs or uploaded product images");
   const rawSpecs = item.specs;
   if (!rawSpecs || typeof rawSpecs !== "object" || Array.isArray(rawSpecs) || Object.keys(rawSpecs).length > 30 || Object.values(rawSpecs).some((v) => typeof v !== "string")) throw new Error("Invalid product: specs must be a string map");
   return {

@@ -1,0 +1,7 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { LoginOptions } from "@/app/login/login-options";
+
+export const metadata:Metadata={title:"Supplier sign in",robots:{index:false,follow:false}};
+
+export default async function SupplierLoginPage({searchParams}:{searchParams:Promise<{oauth_error?:string;status?:string}>}){const {oauth_error,status}=await searchParams;const statusMessage=status==="pending"?"Your application is still awaiting administrator approval.":status==="rejected"?"Your application was rejected. Contact the store if you need help.":"";return <main className="login-page"><div className="login-card"><Link className="wordmark login-brand" href="/">MAGNI<span>TECH</span><i>®</i></Link><p className="overline">MAGNITECH SUPPLIER PORTAL</p><h1>Supplier<br/><em>sign in.</em></h1><p className="login-copy">Sign in with the account used for your supplier application. Pending applications cannot access the dashboard.</p>{statusMessage&&<p className="supplier-status-message" role="status">{statusMessage}</p>}<LoginOptions redirectToAdmin={false} oauthError={oauth_error} supplierMode/><p className="auth-switch">Not registered yet? <Link href="/supplier/register">Apply for supplier access</Link></p><Link className="login-return" href="/supplier">Supplier information <span>↗</span></Link></div><aside className="login-aside"><span>SUPPLIER ACCESS / SIGN IN</span><p>Built together.<br/><em>With care.</em></p></aside></main>}

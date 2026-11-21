@@ -1,5 +1,8 @@
 import path from "node:path";
 import type { NextConfig } from "next";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+
+initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
   // Next 15 dev and build otherwise share `.next`. Running a production build

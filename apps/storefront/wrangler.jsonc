@@ -21,12 +21,24 @@
 			"database_id": "e6fcdc83-39cc-4075-934d-ae72ca12ed76"
 		}
 	],
+	"r2_buckets": [
+		{
+			"binding": "MAGNITECH_PRODUCT_IMAGES",
+			"bucket_name": "magnitech-product-images"
+		}
+	],
 	"previews": {
 		"d1_databases": [
 			{
 				"binding": "MAGHITECH_DB",
 				"database_name": "maghitech-db",
 				"database_id": "e6fcdc83-39cc-4075-934d-ae72ca12ed76"
+			}
+		],
+		"r2_buckets": [
+			{
+				"binding": "MAGNITECH_PRODUCT_IMAGES",
+				"bucket_name": "magnitech-product-images"
 			}
 		]
 	}

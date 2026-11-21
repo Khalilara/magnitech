@@ -202,14 +202,10 @@ services:
       dockerfile: apps/storefront/Dockerfile
       args:
         NEXT_PUBLIC_SITE_URL: https://${DOMAIN}
-        NEXT_PUBLIC_API_URL: https://api.${DOMAIN}
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
     image: ${REGISTRY:-ghcr.io/maghitech}/storefront:${TAG:-latest}
     environment:
-      API_INTERNAL_URL: http://api:8000          # appels SSR via le réseau interne
       REVALIDATE_SECRET: ${REVALIDATE_SECRET}
-    depends_on:
-      api: { condition: service_healthy }
     networks: [edge, app]
     deploy:
       replicas: ${STOREFRONT_REPLICAS:-2}

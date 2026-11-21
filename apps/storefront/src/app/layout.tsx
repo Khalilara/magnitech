@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { StoreProvider } from "@/components/store-provider";
 import { Footer, Header } from "@/components/storefront";
@@ -17,8 +18,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
-      <body><StoreProvider><Header />{children}<Footer /></StoreProvider></body>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <Script id="magnitech-theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `try{document.documentElement.dataset.theme=localStorage.getItem('magnitech-theme')==='dark'?'dark':'light'}catch{document.documentElement.dataset.theme='light'}` }} />
+        <StoreProvider><Header />{children}<Footer /></StoreProvider>
+      </body>
     </html>
   );
 }

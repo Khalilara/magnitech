@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatPrice, type Product } from "@/lib/products";
 import { useStore } from "@/components/store-provider";
+import Link from "next/link";
 
 const blankProduct = (): Product => ({
   id: "",
@@ -61,7 +62,7 @@ export default function AdminProducts() {
 
     const loadedProducts = body as Product[];
     setProducts(loadedProducts);
-    setStoreProducts(loadedProducts.filter((product) => product.published));
+    setStoreProducts(loadedProducts.filter((product) => product.published && product.approvalStatus === "approved"));
     setAuthenticated(true);
   }, [router, setStoreProducts]);
 
@@ -176,8 +177,7 @@ export default function AdminProducts() {
     setBusy(true);
     setNotice("");
     try {
-      const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-      const response = await fetch(`${api}/v1/auth/logout`, { method: "POST", credentials: "include" });
+      const response = await fetch("/api/auth/logout", { method: "POST" });
       if (!response.ok) throw new Error("Sign out request was rejected");
       router.replace("/login");
       router.refresh();
@@ -208,6 +208,7 @@ export default function AdminProducts() {
     <div className="shop-top">
       <div><p className="overline">D1 PRODUCT CATALOG</p><h1>Product<br /><em>management.</em></h1></div>
       <div className="admin-actions">
+        <Link className="button light-button" href="/admin/products">Review submissions <span>↗</span></Link>
         <button className="button dark-button" disabled={busy} onClick={() => openEditor(blankProduct())}>+ Add product</button>
         <button className="text-button" disabled={busy} onClick={() => void signOut()}>Sign out</button>
       </div>

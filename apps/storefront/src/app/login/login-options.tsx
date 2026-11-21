@@ -1,17 +1,45 @@
 "use client";
 
-const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const providers = [
-  ["google", "Continue with Google"],
-  ["github", "Continue with GitHub"],
-  ["microsoft", "Continue with Microsoft"],
-] as const;
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-export function LoginOptions({ redirectToAdmin }: { redirectToAdmin: boolean }) {
-  return <div className="login-providers">
-    {providers.map(([provider, label]) => <a key={provider} href={`${api}/v1/auth/${provider}/start${redirectToAdmin ? "?redirect=%2Fadmin" : ""}`}>
-      <span aria-hidden="true">{provider === "google" ? "G" : provider === "github" ? "⌘" : "▦"}</span>{label}<b aria-hidden="true">↗</b>
-    </a>)}
-    <p className="login-admin-note">Administrator access is granted only to the owner account configured on the server.</p>
-  </div>;
+export function LoginOptions({ redirectToAdmin, oauthError, supplierMode = false }: { redirectToAdmin: boolean; oauthError?: string; supplierMode?: boolean }) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
+      });
+      const body = await response.json() as { error?: string; user?: { role?: string } };
+      if (!response.ok) throw new Error(body.error ?? "Could not sign in.");
+      router.replace(redirectToAdmin && body.user?.role === "admin" ? "/admin" : body.user?.role === "supplier" ? "/supplier/dashboard" : "/shop");
+      router.refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not sign in.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <>
+  {oauthError && <p className="auth-error" role="alert">Sign in could not be completed. {oauthError}</p>}
+  <form className="auth-form" onSubmit={submit}>
+    <label>Email<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
+    <label>Password<input name="password" type="password" autoComplete="current-password" maxLength={128} required /></label>
+    <div className="auth-login-extras"><span>Sessions stay active for 7 days.</span><a href="mailto:abarkaneanass.engineer@gmail.com?subject=MAGNITECH%20account%20access">Forgot password?</a></div>
+    {error && <p className="auth-error" role="alert">{error}</p>}
+    <button className="button dark-button" type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign In"}<span>↗</span></button>
+    <p className="login-admin-note">Admin access is granted separately by the store owner.</p>
+  </form>
+  {!supplierMode&&<div className="oauth-options"><span>OR CONTINUE WITH</span><div>{["Google","GitHub","Microsoft"].map(provider=><a key={provider} href={`/api/auth/oauth/${provider.toLowerCase()}`}>Continue with {provider}</a>)}</div></div>}
+  </>;
 }

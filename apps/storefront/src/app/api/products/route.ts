@@ -9,7 +9,7 @@ export async function GET() {
     if (!db) return Response.json({ error: "D1 binding MAGHITECH_DB is not configured" }, { status: 503 });
     const { results = [] } = await db.prepare(`SELECT p.*, i.image_url
       FROM products p LEFT JOIN product_images i ON i.product_id = p.id
-      WHERE p.published = 1 ORDER BY p.featured DESC, p.name ASC, i.position ASC`)
+      WHERE p.published = 1 AND p.approval_status = 'approved' ORDER BY p.featured DESC, p.name ASC, i.position ASC`)
       .all<DbProductRow & { image_url: string | null }>();
     const grouped = new Map<string, ReturnType<typeof normalizeProduct>>();
     for (const row of results) {

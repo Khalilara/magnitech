@@ -2,6 +2,8 @@ export type Product = {
   id: string; name: string; slug: string; description: string; category: string;
   images: string[]; supplierPrice: number; price: number; inStock: boolean;
   featured: boolean; published: boolean; specs: Record<string, string>;
+  approvalStatus?: "pending" | "approved" | "archived";
+  supplierId?: string | null;
 };
 
 export const initialProducts: Product[] = [
