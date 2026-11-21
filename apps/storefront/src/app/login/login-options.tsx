@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { readJsonResponse } from "@/lib/api-response";
 
 export function LoginOptions({ redirectToAdmin }: { redirectToAdmin: boolean }) {
   const router = useRouter();
@@ -19,7 +20,7 @@ export function LoginOptions({ redirectToAdmin }: { redirectToAdmin: boolean }) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
       });
-      const body = await response.json() as { error?: string; user?: { role?: string } };
+      const body = await readJsonResponse<{ error?: string; user?: { role?: string } }>(response);
       if (!response.ok) throw new Error(body.error ?? "Could not sign in.");
       router.replace(redirectToAdmin && body.user?.role === "admin" ? "/admin" : body.user?.role === "wholesaler" ? "/supplier/dashboard" : "/shop");
       router.refresh();
