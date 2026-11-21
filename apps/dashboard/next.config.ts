@@ -2,6 +2,7 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_BUILD_OUTPUT ?? ".next",
   // Build autonome (server.js + node_modules minimal) pour l'image Docker
   output: process.platform === "win32" ? undefined : "standalone",
   // Monorepo : tracer les dépendances depuis la racine pour inclure les packages internes

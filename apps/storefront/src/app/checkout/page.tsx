@@ -36,7 +36,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
-          _subject: `New order request ${reference} — ${details.firstName} ${details.lastName}`,
+          _subject: `MAGNITECH order request ${reference}`,
           _template: "table",
           _replyto: details.email,
           _url: window.location.href,
@@ -70,7 +70,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (!total) return <main className="page-wrap empty"><h1>Your bag is empty.</h1><Link href="/shop" className="button dark-button">Browse the shop ↗</Link></main>;
+  if (!total) return <main className="page-wrap empty"><h1>Your shopping cart is empty.</h1><Link href="/shop" className="button dark-button">Continue Shopping ↗</Link></main>;
 
   return <main className="page-wrap checkout-layout">
     <div>
@@ -97,6 +97,7 @@ export default function CheckoutPage() {
     <aside className="summary">
       <p className="overline">ORDER SUMMARY</p>
       {items.map((product) => <div key={product.id}><span>{product.name} × {cart[product.id]}</span><b>{formatPrice(product.price * cart[product.id])}</b></div>)}
+      <div><span>Delivery</span><span>{total >= 55 ? "Free" : "Confirmed with your order"}</span></div>
       <div className="summary-total"><b>Total</b><b>{formatPrice(total)}</b></div>
       <p className="fine-print">This is an order request total. Payment will be arranged separately after the store contacts you.</p>
     </aside>

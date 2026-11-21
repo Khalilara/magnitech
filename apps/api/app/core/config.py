@@ -19,6 +19,18 @@ class Settings(BaseSettings):
     default_commission_bps: int = 1200
     return_window_days: int = 14
     cors_origins: str = ""
+    admin_email: str = ""
+    auth_cookie_domain: str = ""
+    storefront_url: str = "http://localhost:3000"
+    dashboard_url: str = "http://localhost:3001"
+    api_public_url: str = "http://localhost:8000"
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    microsoft_client_id: str = ""
+    microsoft_client_secret: str = ""
+    session_ttl_days: int = 7
 
     @property
     def carrier_secrets(self) -> dict[str, str]:

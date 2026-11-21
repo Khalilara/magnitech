@@ -1,11 +1,12 @@
-import { isValidAdminSession, sameOrigin } from "@/lib/admin-auth";
+import { requireAdmin, sameOrigin } from "@/lib/admin-auth";
 import { getDatabase } from "@/lib/d1";
 import { normalizeProduct, productFromBody, type DbProductRow } from "@/lib/product-records";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!(await isValidAdminSession(request))) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
   try {
     const db = await getDatabase();
     if (!db) return Response.json({ error: "D1 binding MAGHITECH_DB is not configured" }, { status: 503 });
@@ -28,8 +29,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
   if (!sameOrigin(request)) return Response.json({ error: "Invalid origin" }, { status: 403 });
-  if (!(await isValidAdminSession(request))) return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const db = await getDatabase();
     if (!db) return Response.json({ error: "D1 binding MAGHITECH_DB is not configured" }, { status: 503 });

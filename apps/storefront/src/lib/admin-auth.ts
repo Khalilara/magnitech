@@ -1,5 +1,7 @@
 import { getAdminSettings } from "@/lib/d1";
 
+export { requireAdmin } from "@/lib/auth";
+
 export const ADMIN_COOKIE = "magnitech_admin";
 const SESSION_SECONDS = 60 * 60 * 12;
 

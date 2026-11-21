@@ -10,12 +10,20 @@ export type DbProductRow = {
   featured: number;
   published: number;
   specs: string;
+  status?: "draft" | "pending_review" | "approved" | "rejected" | "archived";
+  wholesaler_id?: string | null;
+  rejection_reason?: string | null;
 };
 
 export type StoreProduct = {
   id: string; name: string; slug: string; description: string; category: string;
   supplierPrice: number; price: number; inStock: boolean; featured: boolean;
   published: boolean; specs: Record<string, string>; images: string[];
+  approvalStatus?: "pending" | "approved" | "archived";
+  supplierId?: string | null;
+  status?: "draft" | "pending_review" | "approved" | "rejected" | "archived";
+  wholesalerId?: string | null;
+  rejectionReason?: string | null;
 };
 
 export function normalizeProduct(row: DbProductRow & { image_url?: string | null }): StoreProduct {
@@ -28,6 +36,9 @@ export function normalizeProduct(row: DbProductRow & { image_url?: string | null
     id: row.id, name: row.name, slug: row.slug, description: row.description, category: row.category,
     supplierPrice: Number(row.supplier_price_cents) / 100, price: Number(row.price_cents) / 100, inStock: Boolean(row.in_stock),
     featured: Boolean(row.featured), published: Boolean(row.published), specs,
+    status: row.status ?? (row.published ? "approved" : "draft"),
+    approvalStatus: row.status === "pending_review" ? "pending" : row.status === "approved" ? "approved" : row.status === "archived" ? "archived" : "pending",
+    wholesalerId: row.wholesaler_id ?? null,
     images: row.image_url ? [row.image_url] : [],
   };
 }
@@ -47,7 +58,7 @@ export function productFromBody(value: unknown): StoreProduct {
   };
   if (typeof item.inStock !== "boolean" || typeof item.featured !== "boolean" || typeof item.published !== "boolean") throw new Error("Invalid product: stock and publication flags are required");
   const images = item.images;
-  if (!Array.isArray(images) || images.length > 12 || images.some((image) => typeof image !== "string" || image.length > 2048 || !/^https?:\/\//i.test(image))) throw new Error("Invalid product: images must be up to 12 HTTP(S) URLs");
+  if (!Array.isArray(images) || images.length > 12 || images.some((image) => typeof image !== "string" || image.length > 2048 || (!/^https?:\/\//i.test(image) && !/^\/api\/product-images\/[a-z\d-]+\/[a-f\d-]+\.(?:jpg|png|webp)$/i.test(image)))) throw new Error("Invalid product: images must be up to 12 HTTP(S) URLs or uploaded product images");
   const rawSpecs = item.specs;
   if (!rawSpecs || typeof rawSpecs !== "object" || Array.isArray(rawSpecs) || Object.keys(rawSpecs).length > 30 || Object.values(rawSpecs).some((v) => typeof v !== "string")) throw new Error("Invalid product: specs must be a string map");
   return {

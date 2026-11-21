@@ -1,4 +1,4 @@
-import { isValidAdminSession, sameOrigin } from "@/lib/admin-auth";
+import { requireAdmin, sameOrigin } from "@/lib/admin-auth";
 import { getDatabase } from "@/lib/d1";
 import { productFromBody } from "@/lib/product-records";
 
@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ id: string }> };
 
 export async function PUT(request: Request, context: Context) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
   if (!sameOrigin(request)) return Response.json({ error: "Invalid origin" }, { status: 403 });
-  if (!(await isValidAdminSession(request))) return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { id } = await context.params;
     const db = await getDatabase();
@@ -29,8 +30,9 @@ export async function PUT(request: Request, context: Context) {
 }
 
 export async function DELETE(request: Request, context: Context) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
   if (!sameOrigin(request)) return Response.json({ error: "Invalid origin" }, { status: 403 });
-  if (!(await isValidAdminSession(request))) return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { id } = await context.params;
     const db = await getDatabase();
