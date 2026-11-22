@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useStore } from "@/components/store-provider";
 import { readJsonResponse } from "@/lib/api-response";
 
-export function LoginOptions({ redirectToAdmin }: { redirectToAdmin: boolean }) {
+export function LoginOptions() {
   const router = useRouter();
   const { setAuthenticatedUser } = useStore();
   const [error, setError] = useState("");
@@ -25,7 +25,7 @@ export function LoginOptions({ redirectToAdmin }: { redirectToAdmin: boolean }) 
       const body = await readJsonResponse<{ error?: string; user?: { id: string; email: string; role: "customer" | "admin" | "wholesaler"; firstName?: string | null; lastName?: string | null } }>(response);
       if (!response.ok) throw new Error(body.error ?? "Could not sign in.");
       if (body.user) setAuthenticatedUser(body.user);
-      router.replace(redirectToAdmin && body.user?.role === "admin" ? "/admin" : body.user?.role === "wholesaler" ? "/supplier/dashboard" : "/shop");
+      router.replace(body.user?.role === "admin" ? "/admin" : body.user?.role === "wholesaler" ? "/supplier/dashboard" : "/shop");
       router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not sign in.");
