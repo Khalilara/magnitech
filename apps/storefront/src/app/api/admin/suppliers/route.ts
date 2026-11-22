@@ -18,7 +18,10 @@ export async function POST(request:Request) {
   const id=typeof body.id==="string"?body.id:"",action=body.action,note=typeof body.note==="string"?body.note.trim().slice(0,1000):"";
   if(!id||!(action==="approve"||action==="reject"))return Response.json({error:"Choose approve or reject."},{status:400});
   const db=await getDatabase();if(!db)return Response.json({error:"D1 is unavailable."},{status:503});
-  const admin=await findCurrentUser(readSessionToken(request));if(!admin)return Response.json({error:"Authentication required."},{status:401});
+  // The /admin password session is also a valid admin session, but it has no D1 user id.
+  // Keep the reviewer id when a database-backed admin session is available; otherwise
+  // reviewed_by remains NULL (the column is nullable) while requireAdmin remains the gate.
+  const admin=await findCurrentUser(readSessionToken(request));
   const requestRow=await db.prepare(`SELECT p.user_id,p.status,p.business_name,u.email
     FROM wholesaler_profiles p JOIN users u ON u.id=p.user_id WHERE p.id=? LIMIT 1`)
     .bind(id).all<{user_id:string;status:string;business_name:string;email:string}>();
@@ -26,7 +29,7 @@ export async function POST(request:Request) {
   if(row.status!=="pending")return Response.json({error:"This wholesaler application has already been reviewed."},{status:409});
   const status=action==="approve"?"active":"rejected";
   await db.batch([
-    db.prepare("UPDATE wholesaler_profiles SET status=?,rejection_reason=?,reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=? AND status='pending'").bind(status,action==="reject"?(note||null):null,admin.id,id),
+    db.prepare("UPDATE wholesaler_profiles SET status=?,rejection_reason=?,reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=? AND status='pending'").bind(status,action==="reject"?(note||null):null,admin?.id??null,id),
   ]);
   let notificationSent=false;
   if(action==="approve") {
