@@ -3,7 +3,7 @@ import { isValidAdminSession } from "@/lib/admin-session";
 
 export const SESSION_COOKIE = "magnitech_session";
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
-const PASSWORD_ITERATIONS = 600_000;
+const PASSWORD_ITERATIONS = 100_000;
 
 export type AuthUser = {
   id: string;
