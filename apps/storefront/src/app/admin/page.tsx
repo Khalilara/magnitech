@@ -17,6 +17,7 @@ function slugify(value: string) {
 export default function AdminPage() {
   const { setProducts: setStoreProducts } = useStore();
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [superAdmin, setSuperAdmin] = useState(false);
   const [password, setPassword] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -37,8 +38,8 @@ export default function AdminPage() {
   useEffect(() => {
     fetch("/api/admin/session", { cache: "no-store" })
       .then((response) => response.json())
-      .then(async (body) => {
-        if (body.authenticated) await loadProducts();
+        .then(async (body) => {
+        if (body.authenticated) { setSuperAdmin(body.superAdmin === true); await loadProducts(); }
         else setAuthenticated(false);
       })
       .catch(() => { setAuthenticated(false); setNotice("Could not connect to the admin service."); });
@@ -52,14 +53,14 @@ export default function AdminPage() {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Sign in failed");
-      setPassword(""); await loadProducts();
+      setPassword(""); setSuperAdmin(true); await loadProducts();
     } catch (error) { setNotice(error instanceof Error ? error.message : "Sign in failed"); }
     finally { setBusy(false); }
   }
 
   async function signOut() {
     await fetch("/api/admin/session", { method: "DELETE" });
-    setAuthenticated(false); setProducts([]);
+    setAuthenticated(false); setSuperAdmin(false); setProducts([]);
   }
 
   function openEditor(product: Product) {
@@ -141,7 +142,7 @@ export default function AdminPage() {
 
   return <main className="page-wrap admin-page">
     <div className="shop-top"><div><p className="overline">D1 PRODUCT CATALOG</p><h1>Product<br/><em>management.</em></h1></div>
-      <div className="admin-actions"><a className="text-button" href="/root">D1 schema</a><a className="button dark-button" href="/admin/suppliers">Review resellers</a><button className="button dark-button" onClick={() => openEditor(blankProduct())}>+ Add product</button><button className="text-button" onClick={signOut}>Sign out</button></div>
+      <div className="admin-actions"><a className="text-button" href="/root">D1 schema</a>{superAdmin&&<a className="button dark-button" href="/admin/admins">Manage admins</a>}<a className="button dark-button" href="/admin/suppliers">Review resellers</a><button className="button dark-button" onClick={() => openEditor(blankProduct())}>+ Add product</button><button className="text-button" onClick={signOut}>Sign out</button></div>
     </div>
     <div className="local-banner">Changes are saved directly to the Cloudflare D1 catalog.</div>
     {notice && <p className="notice" role="status">{notice}</p>}

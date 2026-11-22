@@ -1,15 +1,15 @@
-import { findCurrentUser, isCloudflareRateLimited, readSessionToken } from "@/lib/auth";
+import { clearSessionCookie, findCurrentUser, isCloudflareRateLimited, logoutSession, readSessionToken } from "@/lib/auth";
 import { getAdminSettings } from "@/lib/d1";
 import { adminPasswordMatches, adminSessionCookie, clearedAdminSessionCookie, createAdminSession, isValidAdminSession, sameOrigin } from "@/lib/admin-session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (await isValidAdminSession(request)) return Response.json({ authenticated: true }, { headers: { "Cache-Control": "no-store" } });
+  if (await isValidAdminSession(request)) return Response.json({ authenticated: true, superAdmin: true }, { headers: { "Cache-Control": "no-store" } });
   const user = await findCurrentUser(readSessionToken(request));
   if (!user) return Response.json({ authenticated: false }, { status: 401, headers: { "Cache-Control": "no-store" } });
   if (user.role !== "admin") return Response.json({ authenticated: false }, { status: 403, headers: { "Cache-Control": "no-store" } });
-  return Response.json({ authenticated: true, user }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ authenticated: true, superAdmin: false, user }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: Request) {
@@ -34,8 +34,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  return new Response(null, {
-    status: 204,
-    headers: { "Set-Cookie": clearedAdminSessionCookie(new URL(request.url).protocol === "https:"), "Cache-Control": "no-store" },
-  });
+  const secure = new URL(request.url).protocol === "https:";
+  const userToken = readSessionToken(request);
+  if (userToken) await logoutSession(request);
+  const headers = new Headers({ "Set-Cookie": clearedAdminSessionCookie(secure), "Cache-Control": "no-store" });
+  if (userToken) headers.append("Set-Cookie", clearSessionCookie(secure));
+  return new Response(null, { status: 204, headers });
 }
