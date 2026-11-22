@@ -7,7 +7,7 @@ export const dynamic="force-dynamic";
 export async function GET(request:Request) {
   const denied=await requireAdmin(request);if(denied)return denied;
   const status=new URL(request.url).searchParams.get("status")??"pending";
-  const statusMap:Record<string,string>={pending:"pending_review",approved:"approved",archived:"archived"};
+  const statusMap:Record<string,string>={pending:"pending_review",rejected:"rejected",approved:"approved",archived:"archived"};
   const dbStatus=statusMap[status];
   if(!dbStatus)return Response.json({error:"Invalid product status."},{status:400});
   const db=await getDatabase();if(!db)return Response.json({error:"D1 is unavailable."},{status:503});
@@ -25,13 +25,14 @@ export async function POST(request:Request) {
   if(!isSameOrigin(request))return Response.json({error:"Invalid origin."},{status:403});
   let body:Record<string,unknown>;try{body=await request.json() as Record<string,unknown>}catch{return Response.json({error:"Invalid request."},{status:400})}
   const id=typeof body.id==="string"?body.id:"",action=body.action,note=typeof body.note==="string"?body.note.trim().slice(0,1000):"";
-  if(!id||!(action==="approve"||action==="archive"))return Response.json({error:"Choose approve or archive."},{status:400});
+  if(!id||!(action==="approve"||action==="reject"||action==="archive"))return Response.json({error:"Choose approve, reject, or archive."},{status:400});
   const db=await getDatabase();if(!db)return Response.json({error:"D1 is unavailable."},{status:503});
-  const admin=await findCurrentUser(readSessionToken(request));if(!admin)return Response.json({error:"Authentication required."},{status:401});
+  // A Cloudflare-secret super-admin session has no D1 user id; reviewed_by is nullable.
+  const admin=await findCurrentUser(readSessionToken(request));
   const current=await db.prepare("SELECT status FROM products WHERE id=? LIMIT 1").bind(id).all<{status:string}>();
   if(!current.results?.length)return Response.json({error:"Product not found."},{status:404});
-  const status=action==="approve"?"approved":"archived",published=action==="approve"?1:0;
+  const status=action==="approve"?"approved":action==="reject"?"rejected":"archived",published=action==="approve"?1:0;
   await db.prepare("UPDATE products SET status=?,published=?,rejection_reason=?,reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=?")
-    .bind(status,published,action==="archive"?(note||null):null,admin.id,id).run();
+    .bind(status,published,action==="approve"?null:(note||null),admin?.id??null,id).run();
   return Response.json({id,status},{headers:{"Cache-Control":"no-store"}});
 }
