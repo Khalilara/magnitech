@@ -4,6 +4,7 @@
 /apps/storefront/migrations/                 @Khalilara
 /apps/storefront/wrangler.jsonc              @Khalilara
 /apps/storefront/package.json                @Khalilara
-/apps/storefront/src/lib/d1.ts               @Khalilara
+/apps/storefront/src/lib/                   @Khalilara
 /apps/storefront/src/app/api/                @Khalilara
+/apps/storefront/src/app/supplier/dashboard/page.tsx @Khalilara
 /apps/api/db/D1_SCHEMA.md                    @Khalilara
