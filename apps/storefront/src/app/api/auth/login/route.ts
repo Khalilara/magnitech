@@ -24,14 +24,30 @@ export async function POST(request: Request) {
 
   const db = await getDatabase();
   if (!db) return Response.json({ error: "User database is unavailable." }, { status: 503 });
-  const { results = [] } = await db.prepare(`SELECT id, email, role, status, password_hash
-    FROM users WHERE email = ? LIMIT 1`).bind(email).all<{
-      id: string; email: string;
-      role: "customer" | "admin" | "wholesaler"; status: string; password_hash: string | null;
-    }>();
-  const user = results[0];
-  const valid = await passwordMatches(password, user?.password_hash ?? "");
-  if (!user || !valid || user.status !== "active") {
+  type LoginUser = {
+    id: string; email: string; role: "customer" | "admin" | "wholesaler";
+    status?: string; is_active?: number; password_hash: string | null; password_salt?: string | null;
+    first_name?: string | null; last_name?: string | null;
+  };
+  let user: LoginUser | undefined;
+  try {
+    const { results = [] } = await db.prepare(`SELECT id, email, role, status, password_hash, first_name, last_name
+      FROM users WHERE email = ? LIMIT 1`).bind(email).all<LoginUser>();
+    user = results[0];
+  } catch {
+    try {
+      const { results = [] } = await db.prepare(`SELECT id, email, role, status, password_hash
+        FROM users WHERE email = ? LIMIT 1`).bind(email).all<LoginUser>();
+      user = results[0];
+    } catch {
+      // Existing D1 auth schema stores the salt separately and uses is_active.
+      const { results = [] } = await db.prepare(`SELECT id, email, role, is_active, password_salt, password_hash, first_name, last_name
+      FROM users WHERE email = ? LIMIT 1`).bind(email).all<LoginUser>();
+      user = results[0];
+    }
+  }
+  const valid = await passwordMatches(password, user?.password_hash ?? "", user?.password_salt);
+  if (!user || !valid || (user.status ? user.status !== "active" : user.is_active !== 1)) {
     return Response.json({ error: "Email or password is incorrect." }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 
@@ -43,7 +59,7 @@ export async function POST(request: Request) {
     if (status !== "active") return Response.json({ error: "Your wholesaler application was not approved. Contact the store for assistance." }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
   const token = await createSession(db, user.id);
-  return Response.json({ user: { id: user.id, email: user.email, role: user.role } }, {
+  return Response.json({ user: { id: user.id, email: user.email, role: user.role, firstName: user.first_name ?? null, lastName: user.last_name ?? null } }, {
     headers: { "Set-Cookie": sessionCookie(token, new URL(request.url).protocol === "https:"), "Cache-Control": "no-store" },
   });
 }
