@@ -40,6 +40,271 @@
   gap: 10px;
 }
 
+.tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: 7px;
+  margin: 0 0 20px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid #dedfd8;
+}
+
+.tabs button {
+  flex: 0 0 auto;
+  padding: 10px 13px;
+  border: 1px solid #dedfd8;
+  background: #f8f8f4;
+  color: #737970;
+  cursor: pointer;
+  font: 9px var(--mono);
+}
+
+.tabs .activeTab {
+  border-color: #222820;
+  background: #222820;
+  color: #fff;
+}
+
+.tableInfo {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  align-items: center;
+  gap: 14px 20px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #eef0e8;
+}
+
+.tableInfo h2,
+.editor h2 {
+  margin: 0 0 6px;
+  font: 500 20px var(--display);
+}
+
+.tableInfo p {
+  margin: 0;
+  color: #666d64;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.tableActions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  white-space: nowrap;
+  font: 9px var(--mono);
+}
+
+.tableActions .button {
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 9px;
+}
+
+.relations {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #666d64;
+  font-size: 10px;
+}
+
+.relations code,
+.rowTable code {
+  font: 9px var(--mono);
+}
+
+.relations small {
+  color: #858a82;
+}
+
+.editor {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid #dedfd8;
+  background: #fbfbf8;
+}
+
+.editorHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.editorHeading .overline {
+  margin: 0 0 5px;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: #333830;
+  font-size: 10px;
+}
+
+.field > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: baseline;
+}
+
+.field small {
+  color: #858a82;
+  font: 8px var(--mono);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  min-height: 38px;
+  padding: 9px 10px;
+  border: 1px solid #d8dad2;
+  border-radius: 0;
+  background: #fff;
+  color: #222820;
+  font: 11px var(--mono);
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field input[readonly] {
+  background: #eceee8;
+  color: #747970;
+}
+
+.wideField,
+.protectedNote,
+.formButtons {
+  grid-column: 1 / -1;
+}
+
+.checkboxField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  color: #333830;
+  font-size: 10px;
+}
+
+.checkboxField input {
+  width: 15px;
+  height: 15px;
+  accent-color: #7e9929;
+}
+
+.protectedNote {
+  margin: 0;
+  color: #6f756b;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.formButtons {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  padding-top: 5px;
+}
+
+.rowTableWrap {
+  overflow: auto;
+  border-top: 1px solid #dedfd8;
+}
+
+.rowTable {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 10px;
+}
+
+.rowTable th,
+.rowTable td {
+  max-width: 280px;
+  padding: 11px 9px;
+  border-bottom: 1px solid #e4e5df;
+  vertical-align: top;
+}
+
+.rowTable th {
+  position: sticky;
+  top: 0;
+  background: #f4f5ef;
+  color: #858a82;
+  font: 8px var(--mono);
+  text-transform: uppercase;
+}
+
+.rowTable td > span {
+  display: block;
+  overflow: hidden;
+  max-width: 260px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: flex;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.rowActions button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #62685f;
+  cursor: pointer;
+  font-size: 9px;
+  text-decoration: underline;
+}
+
+.rowActions .deleteButton {
+  color: #ab4332;
+}
+
+.empty {
+  padding: 24px 12px;
+  color: #747970;
+  font-size: 11px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  color: #777d72;
+  font: 9px var(--mono);
+}
+
+.pagination button:disabled {
+  cursor: default;
+  opacity: .4;
+}
+
 .tableCard {
   border: 1px solid #dedfd8;
   background: #fbfbf8;
@@ -181,5 +446,34 @@
 
   .columnTable {
     min-width: 580px;
+  }
+
+  .tableInfo {
+    grid-template-columns: 1fr;
+    padding: 13px;
+  }
+
+  .tableActions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .form {
+    grid-template-columns: 1fr;
+  }
+
+  .wideField,
+  .protectedNote,
+  .formButtons {
+    grid-column: auto;
+  }
+
+  .editor {
+    padding: 13px;
+  }
+
+  .rowTable {
+    min-width: 720px;
   }
 }
