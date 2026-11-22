@@ -1,8 +1,9 @@
 import { getDatabase, getRuntimeEnv, type D1Database } from "@/lib/d1";
+import { isValidAdminSession } from "@/lib/admin-session";
 
 export const SESSION_COOKIE = "magnitech_session";
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
-const PASSWORD_ITERATIONS = 600_000;
+const PASSWORD_ITERATIONS = 100_000;
 
 export type AuthUser = {
   id: string;
@@ -154,6 +155,7 @@ export async function createSession(db: D1Database, userId: string): Promise<str
 }
 
 export async function requireAdmin(request: Request): Promise<Response | null> {
+  if (await isValidAdminSession(request)) return null;
   const user = await findCurrentUser(readSessionToken(request));
   if (!user) return Response.json({ error: "Authentication required" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   if (user.role !== "admin") return Response.json({ error: "Administrator access required" }, { status: 403, headers: { "Cache-Control": "no-store" } });

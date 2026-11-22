@@ -44,7 +44,6 @@ export async function POST(request: Request) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       if (!/no column named|has no column named/i.test(message)) throw error;
-      // Newer schema variant: it has no profile fields or separate salt column.
       await db.prepare(`INSERT INTO users (id, email, password_hash, role, status)
         VALUES (?, ?, ?, 'customer', 'active')`).bind(id, email, `${passwordParts.salt}.${passwordParts.hash}`).run();
     }
@@ -55,6 +54,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create account";
+    console.error("Customer registration failed", error);
     if (/unique|constraint/i.test(message)) {
       return Response.json({ error: "An account with this email already exists." }, { status: 409 });
     }

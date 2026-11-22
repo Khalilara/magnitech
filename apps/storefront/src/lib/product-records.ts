@@ -58,7 +58,7 @@ export function productFromBody(value: unknown): StoreProduct {
   };
   if (typeof item.inStock !== "boolean" || typeof item.featured !== "boolean" || typeof item.published !== "boolean") throw new Error("Invalid product: stock and publication flags are required");
   const images = item.images;
-  if (!Array.isArray(images) || images.length > 12 || images.some((image) => typeof image !== "string" || image.length > 2048 || (!/^https?:\/\//i.test(image) && !/^\/api\/product-images\/[a-z\d-]+\/[a-f\d-]+\.(?:jpg|png|webp)$/i.test(image)))) throw new Error("Invalid product: images must be up to 12 HTTP(S) URLs or uploaded product images");
+  if (!Array.isArray(images) || images.length > 12 || images.some((image) => typeof image !== "string" || image.length > 2048 || !/^https?:\/\//i.test(image))) throw new Error("Invalid product: images must be up to 12 HTTP(S) URLs");
   const rawSpecs = item.specs;
   if (!rawSpecs || typeof rawSpecs !== "object" || Array.isArray(rawSpecs) || Object.keys(rawSpecs).length > 30 || Object.values(rawSpecs).some((v) => typeof v !== "string")) throw new Error("Invalid product: specs must be a string map");
   return {

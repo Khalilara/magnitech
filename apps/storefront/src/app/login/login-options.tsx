@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useStore } from "@/components/store-provider";
+import { readJsonResponse } from "@/lib/api-response";
 
 export function LoginOptions({ redirectToAdmin }: { redirectToAdmin: boolean }) {
   const router = useRouter();
@@ -21,7 +22,7 @@ export function LoginOptions({ redirectToAdmin }: { redirectToAdmin: boolean }) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
       });
-      const body = await response.json() as { error?: string; user?: { id: string; email: string; role: "customer" | "admin" | "wholesaler"; firstName?: string | null; lastName?: string | null } };
+      const body = await readJsonResponse<{ error?: string; user?: { id: string; email: string; role: "customer" | "admin" | "wholesaler"; firstName?: string | null; lastName?: string | null } }>(response);
       if (!response.ok) throw new Error(body.error ?? "Could not sign in.");
       if (body.user) setAuthenticatedUser(body.user);
       router.replace(redirectToAdmin && body.user?.role === "admin" ? "/admin" : body.user?.role === "wholesaler" ? "/supplier/dashboard" : "/shop");

@@ -11,11 +11,6 @@ export interface D1Database {
   batch<T = unknown>(statements: D1Statement[]): Promise<T[]>;
 }
 
-export interface R2Bucket {
-  put(key: string, value: ArrayBuffer | Uint8Array, options?: { httpMetadata?: { contentType?: string }; customMetadata?: Record<string, string> }): Promise<unknown>;
-  get(key: string): Promise<{ body: ReadableStream; httpMetadata?: { contentType?: string }; httpEtag?: string } | null>;
-}
-
 export async function getDatabase(): Promise<D1Database | null> {
   const { env } = getCloudflareContext();
   return ((env as Record<string, unknown>).MAGHITECH_DB as D1Database | undefined) ?? null;
