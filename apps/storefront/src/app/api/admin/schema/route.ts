@@ -49,7 +49,9 @@ export async function GET(request: Request) {
 
     const { results: tables = [] } = await db.prepare(`
       SELECT name, sql FROM sqlite_master
-      WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+      WHERE type = 'table'
+        AND substr(name, 1, 7) <> 'sqlite_'
+        AND substr(name, 1, 4) <> '_cf_'
       ORDER BY name
     `).all<TableRow>();
 
@@ -80,7 +82,8 @@ export async function GET(request: Request) {
     }));
 
     return Response.json({ tables: schema }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
+  } catch (error) {
+    console.error("Failed to read D1 schema metadata", error);
     return Response.json({ error: "Could not read D1 schema metadata" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
