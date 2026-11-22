@@ -102,6 +102,8 @@ export async function POST(request: Request) {
     const values = normalizeValues(body.values, table.columns, true);
     if (!values) return Response.json({ error: "One or more fields contain invalid values." }, { status: 400 });
     if (table.name === "users") {
+      delete values.created_at;
+      delete values.updated_at;
       const password = typeof body.password === "string" ? body.password : "";
       if (password.length < 12 || password.length > 128) return Response.json({ error: "Set a password between 12 and 128 characters." }, { status: 400 });
       values.password_hash = await hashPassword(password);
@@ -134,14 +136,19 @@ export async function PUT(request: Request) {
     if (!key || body.primaryKeyValue === null || body.primaryKeyValue === undefined) return Response.json({ error: "A primary key is required." }, { status: 400 });
     const values = normalizeValues(body.values, table.columns, false);
     if (!values) return Response.json({ error: "One or more fields contain invalid values." }, { status: 400 });
+    if (table.name === "users") {
+      delete values.created_at;
+      delete values.updated_at;
+    }
     if (table.name === "users" && typeof body.password === "string" && body.password.length > 0) {
       if (body.password.length < 12 || body.password.length > 128) return Response.json({ error: "Set a password between 12 and 128 characters." }, { status: 400 });
       values.password_hash = await hashPassword(body.password);
     }
     const names = Object.keys(values);
-    if (!names.length) return Response.json({ error: "There are no changes to save." }, { status: 400 });
-    const assignments = names.map((name) => `${quoteD1Identifier(name)} = ?`).join(", ");
-    await db.prepare(`UPDATE ${quoteD1Identifier(table.name)} SET ${assignments} WHERE ${quoteD1Identifier(key.name)} = ?`)
+    if (!names.length && table.name !== "users") return Response.json({ error: "There are no changes to save." }, { status: 400 });
+    const assignments = names.map((name) => `${quoteD1Identifier(name)} = ?`);
+    if (table.name === "users") assignments.push(`${quoteD1Identifier("updated_at")} = CURRENT_TIMESTAMP`);
+    await db.prepare(`UPDATE ${quoteD1Identifier(table.name)} SET ${assignments.join(", ")} WHERE ${quoteD1Identifier(key.name)} = ?`)
       .bind(...names.map((name) => values[name]), body.primaryKeyValue).run();
     return Response.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

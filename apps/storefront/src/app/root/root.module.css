@@ -170,7 +170,8 @@
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   min-height: 38px;
   padding: 9px 10px;

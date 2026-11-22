@@ -30,6 +30,8 @@ type SchemaTable = {
 type Row = Record<string, unknown>;
 const PAGE_SIZE = 50;
 const SECRET_COLUMNS = new Set(["password_hash", "token_hash"]);
+const USER_TIMESTAMP_COLUMNS = new Set(["created_at", "updated_at"]);
+const USER_STATUS_OPTIONS = new Set(["active", "disabled"]);
 const BOOLEAN_COLUMNS = new Set(["in_stock", "featured", "published"]);
 
 function displayValue(name: string, value: unknown) {
@@ -123,6 +125,10 @@ export default function SchemaExplorerPage() {
     if (!activeTable) return;
     const values: Record<string, string> = {};
     for (const column of activeTable.columns) values[column.name] = "";
+    if (activeTable.name === "users") {
+      values.role = "customer";
+      values.status = "active";
+    }
     setFormValues(values);
     setPassword("");
     setEditingKey(null);
@@ -154,7 +160,7 @@ export default function SchemaExplorerPage() {
     setNotice("");
     const values: Record<string, unknown> = {};
     for (const column of activeTable.columns) {
-      if (SECRET_COLUMNS.has(column.name) || (formMode === "edit" && column.primaryKey)) continue;
+      if (SECRET_COLUMNS.has(column.name) || (formMode === "edit" && column.primaryKey) || (activeTable.name === "users" && USER_TIMESTAMP_COLUMNS.has(column.name))) continue;
       const value = formValues[column.name] ?? "";
       if (formMode === "create" && value === "" && column.defaultValue !== null) continue;
       if (value === "" && column.nullable) {
@@ -253,9 +259,25 @@ export default function SchemaExplorerPage() {
       {formMode && <section className={styles.editor}>
         <div className={styles.editorHeading}><div><p className="overline">{formMode === "create" ? "NOUVELLE LIGNE" : "MODIFIER LA LIGNE"}</p><h2>{activeTable.name}</h2></div><button className="text-button" type="button" onClick={() => setFormMode(null)}>Annuler</button></div>
         <form className={styles.form} onSubmit={saveRow}>
-          {activeTable.columns.filter((column) => !SECRET_COLUMNS.has(column.name)).map((column) => {
+          {activeTable.columns.filter((column) => !SECRET_COLUMNS.has(column.name) && !(activeTable.name === "users" && USER_TIMESTAMP_COLUMNS.has(column.name))).map((column) => {
             const value = formValues[column.name] ?? "";
             const readOnly = formMode === "edit" && column.primaryKey;
+            if (activeTable.name === "users" && column.name === "role") return <label className={styles.field} key={column.name}>
+              <span>{formatColumnLabel(column)}</span>
+              <select value={value} required onChange={(event) => setFormValues((current) => ({ ...current, [column.name]: event.target.value }))}>
+                <option value="customer">Client particulier</option>
+                <option value="wholesaler">Revendeur</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>;
+            if (activeTable.name === "users" && column.name === "status") return <label className={styles.field} key={column.name}>
+              <span>{formatColumnLabel(column)}</span>
+              <select value={value} required onChange={(event) => setFormValues((current) => ({ ...current, [column.name]: event.target.value }))}>
+                {!USER_STATUS_OPTIONS.has(value) && <option value={value}>{value}</option>}
+                <option value="active">Actif</option>
+                <option value="disabled">Désactivé</option>
+              </select>
+            </label>;
             if (isBooleanColumn(column)) return <label className={styles.checkboxField} key={column.name}>
               <input type="checkbox" checked={value === "1" || value === "true"} disabled={readOnly} onChange={(event) => setFormValues((current) => ({ ...current, [column.name]: event.target.checked ? "1" : "0" }))}/>
               <span>{formatColumnLabel(column)}</span>
@@ -276,6 +298,7 @@ export default function SchemaExplorerPage() {
             <span>Mot de passe <small>12 à 128 caractères{formMode === "edit" ? " · laisse vide pour le conserver" : " · obligatoire"}</small></span>
             <input type="password" value={password} minLength={formMode === "create" ? 12 : undefined} maxLength={128} required={formMode === "create"} autoComplete="new-password" onChange={(event) => setPassword(event.target.value)}/>
           </label>}
+          {activeTable.name === "users" && <p className={styles.protectedNote}>Les dates de création et de modification sont gérées automatiquement par D1.</p>}
           {activeTable.columns.some((column) => SECRET_COLUMNS.has(column.name)) && <p className={styles.protectedNote}>Les colonnes de hash d’authentification ne sont pas exposées. Pour les comptes, définis le mot de passe avec le champ dédié.</p>}
           <div className={styles.formButtons}><button className="text-button" type="button" onClick={() => setFormMode(null)}>Annuler</button><button className="button dark-button" disabled={saving}>{saving ? "Enregistrement…" : "Enregistrer"}</button></div>
         </form>
