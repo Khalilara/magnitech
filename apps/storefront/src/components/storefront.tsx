@@ -1,15 +1,18 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatPrice, type Product } from "@/lib/products";
 import { useStore } from "./store-provider";
 
 export function Header(){
-  const {cart,notice,dismissNotice}=useStore();
+  const {cart,notice,dismissNotice,user,authLoading,logout}=useStore();
+  const router=useRouter();
   const [cartOpen,setCartOpen]=useState(false);
   const [accountOpen,setAccountOpen]=useState(false);
+  const [accountBusy,setAccountBusy]=useState(false);
+  const [accountError,setAccountError]=useState("");
   const accountRef=useRef<HTMLDivElement>(null);
   const path=usePathname();
   const count=Object.values(cart).reduce((total,quantity)=>total+quantity,0);
@@ -27,8 +30,22 @@ export function Header(){
         <form className="header-search" action="/shop"><input name="q" aria-label="Search products" placeholder="Search products..."/><button aria-label="Submit search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.6"/><path d="m16 16 5 5"/></svg></button></form>
         <ThemeToggle/>
         <div className="account-control" ref={accountRef}>
-          <button className="account-button" aria-label="Open account options" aria-haspopup="dialog" aria-expanded={accountOpen} onClick={()=>setAccountOpen(value=>!value)}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c.7-4 3.2-6 7.5-6s6.8 2 7.5 6"/></svg></button>
-          {accountOpen&&<section className="account-popover" aria-label="Account options"><b>Welcome back!</b><Link className="account-email" href="/login">✉&nbsp; Continue with email</Link><p className="account-signup">New here? <Link href="/register">Create an account</Link></p></section>}
+          <button className="account-button" aria-label={user?"Open account menu":"Open account options"} aria-haspopup="dialog" aria-expanded={accountOpen} onClick={()=>{setAccountError("");setAccountOpen(value=>!value)}}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c.7-4 3.2-6 7.5-6s6.8 2 7.5 6"/></svg></button>
+          {accountOpen&&<section className="account-popover" aria-label="Account menu">
+            {authLoading?<p className="account-loading" role="status">Checking your account…</p>:user?<>
+              <b>Welcome{user.firstName?.trim()?`, ${user.firstName.trim()}`:""}!</b>
+              <p className="account-user-email">{user.email}</p>
+              <nav className="account-menu" aria-label="Account links">
+                <Link href="/account/profile" onClick={()=>setAccountOpen(false)}>My Profile <span>↗</span></Link>
+                <Link href="/account/orders" onClick={()=>setAccountOpen(false)}>My Orders <span>↗</span></Link>
+                <Link href="/account/addresses" onClick={()=>setAccountOpen(false)}>My Addresses <span>↗</span></Link>
+                <Link href="/account/wishlist" onClick={()=>setAccountOpen(false)}>My Wishlist <span>↗</span></Link>
+                <Link href="/account/settings" onClick={()=>setAccountOpen(false)}>Account Settings <span>↗</span></Link>
+              </nav>
+              {accountError&&<p className="auth-error" role="alert">{accountError}</p>}
+              <button className="account-logout" disabled={accountBusy} onClick={async()=>{setAccountBusy(true);setAccountError("");try{await logout();setAccountOpen(false);router.replace("/");router.refresh()}catch(error){setAccountError(error instanceof Error?error.message:"Could not sign out.")}finally{setAccountBusy(false)}}}>{accountBusy?"Signing out…":"Log Out"}</button>
+            </>:<><b>Welcome back!</b><Link className="account-email" href="/login">✉&nbsp; Continue with email</Link><p className="account-signup">New here? <Link href="/register">Create an account</Link></p></>}
+          </section>}
         </div>
         {count>0&&<button className="cart-link" onClick={()=>setCartOpen(true)} aria-label={`Open shopping cart, ${count} items`} aria-haspopup="dialog" aria-expanded={cartOpen}>Shopping Cart <span>{count}</span></button>}
         <button className="mobile-menu" aria-label="Open navigation" onClick={()=>document.body.classList.toggle("menu-open")}>☰</button>
@@ -66,6 +83,6 @@ function CartDrawer({open,onClose}:{open:boolean;onClose:()=>void}){
 const brands=["amazon","google","microsoft","apple","samsung","meta","intel","dell","adobe","sony","lenovo","hp"];
 export function BrandMarquee(){return <section className="brand-showcase" aria-label="Technology brands"><p>TRUSTED BY INDUSTRY LEADERS</p><div className="brand-track">{[0,1].map(copy=><div className="brand-group" key={copy} aria-hidden={copy===1}>{brands.map(name=><Image key={name} src={`/brands/${name}.svg`} alt={copy===0?`${name[0].toUpperCase()}${name.slice(1)} logo`:""} width={120} height={32} loading="eager"/> )}</div>)}</div></section>}
 export function Footer(){return <footer className="footer"><div><Link className="wordmark" href="/">MAGNI<span>TECH</span><i>®</i></Link><p>Technology, thoughtfully chosen.<br/>Everyday tools made to work beautifully.</p></div><div><b>Explore</b><Link href="/shop">All products</Link><Link href="/contact">Contact</Link></div><div><b>Information</b><Link href="/legal">Privacy & terms</Link><span>Shipping & returns</span><span>© Magnitech 2026</span></div><div className="foot-note">A quieter kind of<br/><em>upgrade.</em></div></footer>}
-export function ProductCard({product}:{product:Product}){const {add}=useStore();return <article className="product-card"><Link href={`/product/${product.slug}`} className="product-photo"><Image src={product.images[0]} alt={product.name} fill sizes="(max-width:680px) 50vw, (max-width:1000px) 33vw, 25vw"/><span className="photo-tag">{product.inStock?"READY TO SHIP":"COMING BACK SOON"}</span></Link><div className="product-under"><Link href={`/product/${product.slug}`}><h3>{product.name}</h3></Link><button className="quick-add" onClick={()=>add(product.id)} aria-label={`Add ${product.name} to cart`}>+</button><div><span>{product.category}</span><strong>{formatPrice(product.price)}</strong></div></div></article>}
+export function ProductCard({product}:{product:Product}){const {add,wishlist,toggleWishlist}=useStore();const saved=wishlist.includes(product.id);return <article className="product-card"><Link href={`/product/${product.slug}`} className="product-photo"><Image src={product.images[0]} alt={product.name} fill sizes="(max-width:680px) 50vw, (max-width:1000px) 33vw, 25vw"/><span className="photo-tag">{product.inStock?"READY TO SHIP":"COMING BACK SOON"}</span></Link><div className="product-under"><Link href={`/product/${product.slug}`}><h3>{product.name}</h3></Link><div className="product-card-actions"><button className="wishlist-toggle" aria-label={saved?`Remove ${product.name} from wishlist`:`Add ${product.name} to wishlist`} aria-pressed={saved} onClick={()=>toggleWishlist(product.id)}>{saved?"♥":"♡"}</button><button className="quick-add" onClick={()=>add(product.id)} aria-label={`Add ${product.name} to cart`}>+</button></div><div><span>{product.category}</span><strong>{formatPrice(product.price)}</strong></div></div></article>}
 export function ProductGrid({items}:{items:Product[]}){return items.length?<div className="product-grid">{items.map(p=><ProductCard key={p.id} product={p}/>)}</div>:<div className="empty"><h3>No products found</h3><p>Try another search or category.</p></div>}
 export function Shop(){const {products}=useStore();const [cat,setCat]=useState("All products"),[query,setQuery]=useState(""),[sort,setSort]=useState("featured");useEffect(()=>{setQuery(new URLSearchParams(window.location.search).get("q")??"")},[]);const categories=["All products",...Array.from(new Set(products.filter(p=>p.published).map(p=>p.category)))];const visible=useMemo(()=>products.filter(p=>p.published&&(cat==="All products"||p.category===cat)&&`${p.name} ${p.category} ${p.description}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>sort==="price-low"?a.price-b.price:sort==="price-high"?b.price-a.price:sort==="name"?a.name.localeCompare(b.name):Number(b.featured)-Number(a.featured)),[products,cat,query,sort]);return <main className="page-wrap"><div className="shop-top"><div><p className="overline">THE MAGNITECH EDIT</p><h1>Technology that<br/><em>fits your everyday.</em></h1></div><p className="shop-intro">Considered essentials for work, play and everything in between. Find the right piece for your daily rhythm.</p></div><div className="shop-controls"><div className="chips">{categories.map(c=><button key={c} onClick={()=>setCat(c)} className={cat===c?"chosen":""}>{c}</button>)}</div><div className="filter-controls"><label className="search"><span>⌕</span><input placeholder="Search the edit" value={query} onChange={e=>setQuery(e.target.value)}/></label><select aria-label="Sort products" value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name</option></select></div></div><p className="result-count">Showing {visible.length} pieces</p><ProductGrid items={visible}/></main>}

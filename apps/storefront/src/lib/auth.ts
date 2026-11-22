@@ -11,6 +11,8 @@ export type AuthUser = {
   role: "customer" | "admin" | "wholesaler";
   status: "active" | "pending" | "suspended" | "disabled";
   wholesalerId?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
 };
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -30,20 +32,32 @@ async function sha256(value: string): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+async function derivePasswordHash(password: string, saltBytes: Uint8Array): Promise<string> {
+  const saltForCrypto = Uint8Array.from(saltBytes);
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations: PASSWORD_ITERATIONS },
+    { name: "PBKDF2", hash: "SHA-256", salt: saltForCrypto, iterations: PASSWORD_ITERATIONS },
     key,
     256,
   );
-  return `${toBase64Url(saltBytes)}.${toBase64Url(new Uint8Array(bits))}`;
+  return toBase64Url(new Uint8Array(bits));
 }
 
-export async function passwordMatches(password: string, storedHash: string): Promise<boolean> {
-  const [salt, expectedHash, extra] = storedHash.split(".");
-  if (!salt || !expectedHash || extra) return false;
+export async function hashPassword(password: string): Promise<string> {
+  const parts = await hashPasswordParts(password);
+  return `${parts.salt}.${parts.hash}`;
+}
+
+export async function hashPasswordParts(password: string): Promise<{ salt: string; hash: string }> {
+  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+  return { salt: toBase64Url(saltBytes), hash: await derivePasswordHash(password, saltBytes) };
+}
+
+export async function passwordMatches(password: string, storedHash: string, legacySalt?: string | null): Promise<boolean> {
+  const [packedSalt, packedHash, extra] = storedHash.split(".");
+  const salt = legacySalt ?? packedSalt;
+  const expectedHash = legacySalt ? storedHash : packedHash;
+  if (!salt || !expectedHash || (!legacySalt && extra)) return false;
   try {
     const saltBytes = new Uint8Array(Array.from(fromBase64Url(salt)));
     const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
@@ -93,23 +107,50 @@ export async function findCurrentUser(token: string | null, db?: D1Database | nu
   const database = db ?? await getDatabase();
   if (!database) return null;
   const tokenHash = await sha256(token);
-  const { results = [] } = await database.prepare(`
-    SELECT u.id, u.email, u.role, u.status, wp.id AS wholesalerId
-    FROM user_sessions s
-    JOIN users u ON u.id = s.user_id
-    LEFT JOIN wholesaler_profiles wp ON wp.user_id = u.id
-    WHERE s.token_hash = ? AND s.expires_at > ? AND s.revoked_at IS NULL AND u.status = 'active'
-    LIMIT 1
-  `).bind(tokenHash, new Date().toISOString()).all<AuthUser>();
-  return results[0] ?? null;
+  try {
+    const { results = [] } = await database.prepare(`
+      SELECT u.id, u.email, u.role, u.status, wp.id AS wholesalerId, u.first_name AS firstName, u.last_name AS lastName
+      FROM user_sessions s
+      JOIN users u ON u.id = s.user_id
+      LEFT JOIN wholesaler_profiles wp ON wp.user_id = u.id
+      WHERE s.token_hash = ? AND s.expires_at > ? AND s.revoked_at IS NULL AND u.status = 'active'
+      LIMIT 1
+    `).bind(tokenHash, new Date().toISOString()).all<AuthUser>();
+    return results[0] ?? null;
+  } catch {
+    try {
+      // Some current-schema databases have sessions but no persisted name fields.
+      const { results = [] } = await database.prepare(`
+        SELECT u.id, u.email, u.role, u.status, wp.id AS wholesalerId
+        FROM user_sessions s JOIN users u ON u.id = s.user_id
+        LEFT JOIN wholesaler_profiles wp ON wp.user_id = u.id
+        WHERE s.token_hash = ? AND s.expires_at > ? AND s.revoked_at IS NULL AND u.status = 'active' LIMIT 1
+      `).bind(tokenHash, new Date().toISOString()).all<AuthUser>();
+      return results[0] ?? null;
+    } catch {
+      // Existing Magnitech D1 instances use auth_sessions and is_active.
+      const { results = [] } = await database.prepare(`
+        SELECT u.id, u.email, u.role, 'active' AS status, NULL AS wholesalerId,
+          u.first_name AS firstName, u.last_name AS lastName
+        FROM auth_sessions s JOIN users u ON u.id = s.user_id
+        WHERE s.token_hash = ? AND s.expires_at > ? AND u.is_active = 1 LIMIT 1
+      `).bind(tokenHash, Math.floor(Date.now() / 1000)).all<AuthUser>();
+      return results[0] ?? null;
+    }
+  }
 }
 
 export async function createSession(db: D1Database, userId: string): Promise<string> {
   const token = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
   const tokenHash = await sha256(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
-  await db.prepare("INSERT INTO user_sessions (id, token_hash, user_id, expires_at) VALUES (?, ?, ?, ?)")
-    .bind(crypto.randomUUID(), tokenHash, userId, expiresAt).run();
+  try {
+    await db.prepare("INSERT INTO user_sessions (id, token_hash, user_id, expires_at) VALUES (?, ?, ?, ?)")
+      .bind(crypto.randomUUID(), tokenHash, userId, expiresAt).run();
+  } catch {
+    await db.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)")
+      .bind(tokenHash, userId, Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS).run();
+  }
   return token;
 }
 
@@ -125,8 +166,13 @@ export async function logoutSession(request: Request): Promise<void> {
   const token = readSessionToken(request);
   if (!token) return;
   const db = await getDatabase();
-  if (db) await db.prepare("UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE token_hash = ?")
-    .bind(await sha256(token)).run();
+  if (!db) return;
+  const tokenHash = await sha256(token);
+  try {
+    await db.prepare("UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE token_hash = ?").bind(tokenHash).run();
+  } catch {
+    await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
+  }
 }
 
 export async function isCloudflareRateLimited(

@@ -13,8 +13,8 @@ export default function SupplierRegisterForm(){
     <div className="auth-form-row"><label>Company name<input name="companyName" maxLength={160} required/></label><label>Phone<input name="phone" type="tel" maxLength={40} required/></label></div>
     <label>Business address<textarea name="businessAddress" rows={2} maxLength={500} required/></label>
     <div className="auth-form-row"><label>Business registration <small>Optional</small><input name="businessRegistration" maxLength={120}/></label></div>
-    <div className="auth-form-row"><label>Password<input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={128} required/><small>At least 12 characters.</small></label><label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" minLength={12} maxLength={128} required/></label></div>
-    {error&&<p className="auth-error" role="alert">{error}</p>}<button className="button dark-button" disabled={busy}>{busy?"Submitting application…":"Submit supplier application"}<span>↗</span></button><p className="login-admin-note">Your application stays pending until an administrator reviews it. No supplier access is granted on submission.</p>
+    <div className="auth-form-row"><label>Password<input name="password" type="password" autoComplete="new-password" maxLength={128} required/></label><label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" maxLength={128} required/></label></div>
+    {error&&<p className="auth-error" role="alert">{error}</p>}<button className="supplier-send-button" disabled={busy}>{busy?"Sending…":"Send"}</button><p className="login-admin-note">Your application stays pending until an administrator reviews it. No supplier access is granted on submission.</p>
   </form>;
 }
 

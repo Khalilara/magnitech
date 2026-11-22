@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useStore } from "@/components/store-provider";
 import { readJsonResponse } from "@/lib/api-response";
 
 export function RegisterForm() {
   const router = useRouter();
+  const { setAuthenticatedUser } = useStore();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -24,13 +26,14 @@ export function RegisterForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: form.get("email"), password,
+          firstName: form.get("firstName"), lastName: form.get("lastName"), email: form.get("email"), password,
           acceptedTerms: form.get("acceptedTerms") === "on",
         }),
       });
-      const body = await readJsonResponse<{ error?: string }>(response);
+      const body = await readJsonResponse<{ error?: string; user?: { id: string; email: string; role: "customer"; firstName?: string | null; lastName?: string | null } }>(response);
       if (!response.ok) throw new Error(body.error ?? "Could not create your account.");
-      router.replace("/shop");
+      if (body.user) setAuthenticatedUser(body.user);
+      router.replace("/");
       router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not create your account.");
@@ -40,9 +43,10 @@ export function RegisterForm() {
   }
 
   return <form className="auth-form" onSubmit={submit}>
+    <div className="auth-form-row"><label>First name<input name="firstName" autoComplete="given-name" maxLength={100} required /></label><label>Last name<input name="lastName" autoComplete="family-name" maxLength={100} required /></label></div>
     <label>Email<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
-    <label>Password<input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={128} required /><small>At least 12 characters.</small></label>
-    <label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" minLength={12} maxLength={128} required /></label>
+    <label>Password<input name="password" type="password" autoComplete="new-password" maxLength={128} required /></label>
+    <label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" maxLength={128} required /></label>
     <label className="auth-consent"><input name="acceptedTerms" type="checkbox" required /> I agree to the <a href="/legal">Terms and Conditions</a>.</label>
     {error && <p className="auth-error" role="alert">{error}</p>}
     <button className="button dark-button" type="submit" disabled={busy}>{busy ? "Creating account…" : "Sign Up"}<span>↗</span></button>

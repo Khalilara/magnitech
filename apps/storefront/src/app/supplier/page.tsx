@@ -1,3 +1,22 @@
-"use client";import {useState} from "react";
-const endpoint=process.env.NEXT_PUBLIC_SUPPLIER_FORM_ENDPOINT;
-export default function SupplierPage(){const [sent,setSent]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState("");async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!endpoint){setError("Supplier proposals are not connected yet. Please contact suppliers@magnitech.fr.");return;}setBusy(true);setError("");try{const form=e.currentTarget;const data=Object.fromEntries(new FormData(form).entries());const response=await fetch(endpoint,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify({...data,_subject:`MAGNITECH supplier proposal — ${data.productName}`,_template:"table"})});if(!response.ok)throw new Error("The submission could not be sent. Please try again.");setSent(true);form.reset();}catch(err){setError(err instanceof Error?err.message:"The submission could not be sent.");}finally{setBusy(false);}}return <main className="form-page page-wrap"><div className="form-intro"><p className="overline">MAGNITECH PARTNERS</p><h1>Good products<br/>start with a <em>conversation.</em></h1><p>Tell us about the products you make or source. Our team reviews every submission personally. Nothing is published automatically.</p><div className="form-note">01 <span>Share the details</span><br/>02 <span>We review your proposal</span><br/>03 <span>We’ll be in touch</span></div><div className="supplier-account-links"><a href="/supplier/register">Apply for supplier access ↗</a><a href="/supplier/login">Supplier sign in →</a></div></div><div className="form-card">{sent?<div className="success-state"><span>✓</span><p className="overline">SUBMISSION RECEIVED</p><h2>Thank you for the introduction.</h2><p>Our team will review your proposal and reach out by email if it’s a good fit.</p></div>:<form onSubmit={submit} className="supplier-form"><h2>Product proposal</h2><div className="form-grid"><label>Supplier / company name<input name="supplierName" required/></label><label>Contact name<input name="contactName" required/></label><label>Email<input type="email" name="email" required/></label><label>Phone<input type="tel" name="phone" required/></label><label>Product name<input name="productName" required/></label><label>Category<select name="category" required defaultValue=""><option value="" disabled>Select a category</option>{["Computing","Audio","Gaming","Smart devices","Accessories","Other"].map(c=><option key={c}>{c}</option>)}</select></label><label>Supplier purchase price (€)<input type="number" name="supplierPrice" min="0" step="0.01" required/></label><label>Available stock<input type="number" name="stock" min="0" required/></label><label className="wide">Product description<textarea name="description" rows={4} required/></label><label className="wide">Product image links <span>(one URL per line)</span><textarea name="imageLinks" rows={3} placeholder="https://…" required/></label><label>Delivery time<input name="deliveryTime" placeholder="e.g. 3–5 days" required/></label><label className="wide">Additional information<textarea name="additionalInformation" rows={3}/></label></div><button className="button dark-button" disabled={busy}>{busy?"Sending proposal…":"Send proposal"}<span>↗</span></button>{error&&<p className="notice error" role="alert">{error}</p>}<p className="fine-print">Your proposal is emailed for review. Images are submitted as links; image files are not uploaded.</p></form>}</div></main>}
+import type { Metadata } from "next";
+import Link from "next/link";
+
+export const metadata: Metadata = { title: "Supplier portal", robots: { index: false, follow: false } };
+
+export default function SupplierPortalPage() {
+  return <main className="login-page supplier-portal-page">
+    <section className="login-card supplier-portal-card">
+      <Link className="wordmark login-brand" href="/" aria-label="MAGNITECH home">MAGNI<span>TECH</span><i>®</i></Link>
+      <p className="overline">MAGNITECH PARTNERS</p>
+      <h1>Supplier<br/><em>portal.</em></h1>
+      <p className="login-copy">A dedicated space for supplier applications and account access. New applications are reviewed by the MAGNITECH team before access is granted.</p>
+      <div className="supplier-portal-actions">
+        <Link className="button dark-button" href="/supplier/login">Supplier Sign In <span>↗</span></Link>
+        <Link className="button light-button" href="/supplier/register">Become a Supplier / Register <span>↗</span></Link>
+      </div>
+      <p className="login-admin-note">Already submitted an application? Sign in to check access after approval.</p>
+      <Link className="login-return" href="/">Continue browsing the shop <span>↗</span></Link>
+    </section>
+    <aside className="login-aside supplier-portal-aside"><span>MAGNITECH / SUPPLIER ACCESS</span><p>Thoughtful partners.<br/><em>Better things.</em></p></aside>
+  </main>;
+}
