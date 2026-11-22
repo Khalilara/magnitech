@@ -1,70 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/components/store-provider";
 import { formatPrice } from "@/lib/products";
 import type { CheckoutDetails } from "@/lib/payment";
 
-const orderEndpoint = process.env.NEXT_PUBLIC_ORDER_FORM_ENDPOINT;
-
 export default function CheckoutPage() {
   const { cart, products, clear } = useStore();
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const idempotencyKey = useRef<string | null>(null);
   const items = products.filter((product) => cart[product.id]);
   const total = items.reduce((sum, product) => sum + product.price * cart[product.id], 0);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
-    if (!orderEndpoint) {
-      setMessage("Order email is not configured yet. Please contact the store before placing your order.");
-      return;
-    }
     setBusy(true);
-    const form = event.currentTarget;
-    const details = Object.fromEntries(new FormData(form).entries()) as unknown as CheckoutDetails;
-    const reference = `MN-${Date.now().toString(36).toUpperCase()}`;
-    const orderLines = items.map((product) =>
-      `${product.name} × ${cart[product.id]} — ${formatPrice(product.price * cart[product.id])}`,
-    );
+    const formData = new FormData(event.currentTarget);
+    const details = Object.fromEntries(formData.entries()) as unknown as CheckoutDetails;
+    if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
     try {
-      const response = await fetch(orderEndpoint, {
+      const response = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          _subject: `MAGNITECH order request ${reference}`,
-          _template: "table",
-          _replyto: details.email,
-          _url: window.location.href,
-          orderReference: reference,
-          orderStatus: "Order request received — awaiting manual confirmation. No payment taken.",
-          name: `${details.firstName} ${details.lastName}`,
-          email: details.email,
-          phone: details.phone,
-          deliveryCountry: details.country,
-          deliveryCity: details.city,
-          deliveryAddress: details.address,
-          deliveryPostalCode: details.postalCode,
-          deliveryInstructions: details.instructions || "None",
-          products: orderLines.join("\n"),
-          orderTotal: formatPrice(total),
-          paymentStatus: "NOT PAID — contact the customer to confirm payment separately",
+          idempotencyKey: idempotencyKey.current,
+          customer: { ...details, orderConsent: formData.get("orderConsent") === "on" },
+          items: items.map((product) => ({ productId: product.id, quantity: cart[product.id] })),
         }),
       });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || (result.success !== true && result.success !== "true")) {
-        throw new Error(result.message || "The order email could not be sent. Please try again.");
-      }
-      sessionStorage.setItem("magnitech-order-reference", reference);
+      const result = await response.json().catch(() => ({})) as { error?: string; reference?: string; notificationSent?: boolean | null };
+      if (!response.ok || !result.reference) throw new Error(result.error || "The order request could not be saved. Please try again.");
+      sessionStorage.setItem("magnitech-order-reference", result.reference);
       sessionStorage.setItem("magnitech-order-status", "request-received");
+      if (typeof result.notificationSent === "boolean") sessionStorage.setItem("magnitech-order-notification-sent", String(result.notificationSent));
       clear();
       router.push("/order-confirmation");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The order email could not be sent. Please try again.");
+      setMessage(error instanceof Error ? error.message : "The order request could not be saved. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -76,21 +53,20 @@ export default function CheckoutPage() {
     <div>
       <p className="overline">CHECKOUT · STEP 01</p>
       <h1>Delivery details<span className="title-period">.</span></h1>
-      <p>Submit your order request. We’ll email the store with your details so we can confirm availability and follow up with you about payment.</p>
+      <p>Submit your order request. We will save it securely and notify the store so we can confirm availability and follow up about payment.</p>
       <form className="checkout-form" onSubmit={submit}>
         <label>First name<input name="firstName" autoComplete="given-name" required/></label>
         <label>Last name<input name="lastName" autoComplete="family-name" required/></label>
         <label className="wide">Email<input name="email" type="email" autoComplete="email" required/></label>
         <label>Phone<input name="phone" type="tel" autoComplete="tel" required/></label>
-        <label>Country<input name="country" autoComplete="country-name" required/></label>
+        <label>Country<input name="country" autoComplete="country-name" placeholder="France or FR" required/></label>
         <label className="wide">Full address<input name="address" autoComplete="street-address" required/></label>
         <label>City<input name="city" autoComplete="address-level2" required/></label>
         <label>Postal code<input name="postalCode" autoComplete="postal-code" required/></label>
         <label className="wide">Delivery instructions <span>(optional)</span><textarea name="instructions" rows={3}/></label>
-        <label className="wide order-consent"><input type="checkbox" name="orderConsent" required/> I agree to send these details to MAGNITECH by email to process my order request.</label>
-        <button className="button dark-button wide" disabled={!orderEndpoint || busy}>{busy ? "Sending order request…" : "Submit order request"}<span>↗</span></button>
+        <label className="wide order-consent"><input type="checkbox" name="orderConsent" required/> I agree to send these details to MAGNITECH to process my order request.</label>
+        <button className="button dark-button wide" disabled={busy}>{busy ? "Saving order request…" : "Submit order request"}<span>↗</span></button>
       </form>
-      {!orderEndpoint && <p className="notice" role="status">Order email is not configured yet. Add the store’s FormSubmit AJAX endpoint to <code>NEXT_PUBLIC_ORDER_FORM_ENDPOINT</code> to enable this button.</p>}
       {message && <p className="notice error" role="alert">{message}</p>}
       <p className="fine-print">Submitting creates an unpaid order request only. We’ll contact you to confirm the order and arrange payment; no payment is taken on this page.</p>
     </div>
